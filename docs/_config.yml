@@ -1,0 +1,7 @@
+title: Rest2MC Gateway
+description: No-code gateway for publishing MCP servers and tools over existing REST APIs.
+theme: null
+markdown: kramdown
+kramdown:
+  input: GFM
+permalink: pretty
