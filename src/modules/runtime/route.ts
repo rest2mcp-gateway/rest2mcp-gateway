@@ -1,136 +1,116 @@
 import type { FastifyPluginAsync } from "fastify";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 import { runtimeService } from "./service.js";
+import {
+  buildProtectedResourceMetadata,
+  validateRuntimeAccessToken
+} from "./auth.js";
 
 const runtimeParamsSchema = z.object({
   organizationSlug: z.string().min(1),
   serverSlug: z.string().min(1)
 });
 
-const jsonRpcRequestSchema = z.object({
-  jsonrpc: z.literal("2.0"),
-  id: z.union([z.string(), z.number(), z.null()]).optional(),
-  method: z.string().min(1),
-  params: z.unknown().optional()
-});
-
-const jsonRpcSuccess = (id: string | number | null | undefined, result: unknown) => ({
-  jsonrpc: "2.0" as const,
-  id: id ?? null,
-  result
-});
-
-const jsonRpcError = (
-  id: string | number | null | undefined,
-  code: number,
-  message: string,
-  data?: unknown
-) => ({
-  jsonrpc: "2.0" as const,
-  id: id ?? null,
-  error: {
-    code,
-    message,
-    data
-  }
-});
-
 export const runtimeRoutes: FastifyPluginAsync = async (app) => {
-  app.get("/:organizationSlug/:serverSlug", {
+  app.get("/.well-known/oauth-protected-resource/:organizationSlug/:serverSlug", {
     schema: {
       tags: ["mcp-runtime"],
       params: runtimeParamsSchema
     }
   }, async (request) => {
     const params = runtimeParamsSchema.parse(request.params);
-    const initialization = await runtimeService.initialize(
-      app,
-      params.organizationSlug,
-      params.serverSlug
-    );
+    const runtimeServer = await runtimeService.getServer(app, params.organizationSlug, params.serverSlug);
 
-    return {
-      ok: true,
-      transport: "jsonrpc-http",
-      endpoint: `/mcp/${params.organizationSlug}/${params.serverSlug}`,
-      server: initialization.serverInfo
-    };
+    if (runtimeServer.server.accessMode !== "protected" || !runtimeServer.authServerConfig) {
+      return {
+        resource: new URL(`/mcp/${params.organizationSlug}/${params.serverSlug}`, `${request.protocol}://${request.headers.host}`).href,
+        authorization_servers: []
+      };
+    }
+
+    return buildProtectedResourceMetadata(
+      request,
+      params.organizationSlug,
+      params.serverSlug,
+      runtimeServer.authServerConfig,
+      runtimeServer.server.title
+    );
   });
 
-  app.post("/:organizationSlug/:serverSlug", {
+  app.route({
+    method: ["GET", "POST", "DELETE"],
+    url: "/:organizationSlug/:serverSlug",
     schema: {
       tags: ["mcp-runtime"],
-      params: runtimeParamsSchema,
-      body: jsonRpcRequestSchema
-    }
-  }, async (request, reply) => {
-    const params = runtimeParamsSchema.parse(request.params);
-    const body = jsonRpcRequestSchema.parse(request.body);
+      params: runtimeParamsSchema
+    },
+    async handler(request, reply) {
+      const params = runtimeParamsSchema.parse(request.params);
 
-    try {
-      switch (body.method) {
-        case "initialize":
-          return jsonRpcSuccess(
-            body.id,
-            await runtimeService.initialize(app, params.organizationSlug, params.serverSlug)
-          );
-        case "ping":
-        case "notifications/initialized":
-          return jsonRpcSuccess(body.id, {});
-        case "tools/list":
-          return jsonRpcSuccess(
-            body.id,
-            await runtimeService.listTools(app, params.organizationSlug, params.serverSlug)
-          );
-        case "tools/call": {
-          const callParams = z.object({
-            name: z.string().min(1),
-            arguments: z.unknown().optional()
-          }).parse(body.params);
+      try {
+        const runtimeServer = await runtimeService.getServer(app, params.organizationSlug, params.serverSlug);
+        const authPayload = await validateRuntimeAccessToken(
+          request,
+          params.organizationSlug,
+          params.serverSlug,
+          runtimeServer.authServerConfig,
+          {
+            accessMode: runtimeServer.server.accessMode,
+            audience: runtimeServer.server.audience
+          }
+        );
 
-          return jsonRpcSuccess(
-            body.id,
-            await runtimeService.callTool(
-              app,
-              params.organizationSlug,
-              params.serverSlug,
-              callParams.name,
-              callParams.arguments
-            )
-          );
+        if (authPayload) {
+          (request.raw as typeof request.raw & { auth?: unknown }).auth = authPayload;
         }
-        default:
-          reply.code(200);
-          return jsonRpcError(body.id, -32601, `Method not found: ${body.method}`);
-      }
-    } catch (error) {
-      if (
-        error &&
-        typeof error === "object" &&
-        "statusCode" in error &&
-        "message" in error &&
-        "code" in error
-      ) {
-        const typed = error as {
-          statusCode: number;
-          message: string;
-          code: string;
-          details?: unknown;
-        };
-        reply.code(200);
-        return jsonRpcError(body.id, -32000, typed.message, {
-          code: typed.code,
-          statusCode: typed.statusCode,
-          details: typed.details
+
+        const transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: undefined
+        });
+        const server = runtimeService.createSdkServer(app, runtimeServer);
+
+        await server.connect(transport);
+        await transport.handleRequest(
+          request.raw,
+          reply.raw,
+          request.method === "POST" ? request.body : undefined
+        );
+        await server.close();
+        return reply;
+      } catch (error) {
+        if (
+          error &&
+          typeof error === "object" &&
+          "statusCode" in error &&
+          "message" in error &&
+          "code" in error
+        ) {
+          const typed = error as {
+            statusCode: number;
+            message: string;
+            code: string;
+            details?: Record<string, unknown>;
+          };
+          const wwwAuthenticate = typeof typed.details?.wwwAuthenticate === "string" ? typed.details.wwwAuthenticate : null;
+          if (wwwAuthenticate) {
+            reply.header("www-authenticate", wwwAuthenticate);
+          }
+          return reply.code(typed.statusCode).send({
+            error: {
+              code: typed.code,
+              message: typed.message
+            }
+          });
+        }
+
+        return reply.code(500).send({
+          error: {
+            code: "runtime_internal_error",
+            message: error instanceof Error ? error.message : "Internal MCP runtime error"
+          }
         });
       }
-
-      reply.code(200);
-      return jsonRpcError(
-        body.id,
-        -32603,
-        error instanceof Error ? error.message : "Internal MCP runtime error"
-      );
     }
   });
 };

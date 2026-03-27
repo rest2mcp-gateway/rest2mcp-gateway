@@ -36,6 +36,17 @@ CREATE TABLE IF NOT EXISTS organizations (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS organizations_slug_idx ON organizations (slug);
 
+CREATE TABLE IF NOT EXISTS auth_server_configs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  issuer text NOT NULL,
+  jwks_uri text NOT NULL,
+  authorization_server_metadata_url text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS auth_server_configs_org_idx ON auth_server_configs (organization_id);
+
 CREATE TABLE IF NOT EXISTS users (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
@@ -109,10 +120,14 @@ CREATE TABLE IF NOT EXISTS mcp_servers (
   title text NOT NULL,
   description text,
   auth_mode auth_mode NOT NULL DEFAULT 'local',
+  access_mode text NOT NULL DEFAULT 'public',
+  audience text,
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE mcp_servers ADD COLUMN IF NOT EXISTS access_mode text NOT NULL DEFAULT 'public';
+ALTER TABLE mcp_servers ADD COLUMN IF NOT EXISTS audience text;
 CREATE UNIQUE INDEX IF NOT EXISTS mcp_servers_org_slug_idx ON mcp_servers (organization_id, slug);
 CREATE INDEX IF NOT EXISTS mcp_servers_org_idx ON mcp_servers (organization_id);
 

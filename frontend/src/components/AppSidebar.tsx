@@ -13,6 +13,7 @@ const navItems = [
   { title: "Dashboard", path: "/", icon: LayoutDashboard },
   { title: "Backend APIs", path: "/backend-apis", icon: Database },
   { title: "MCP Servers", path: "/mcp-servers", icon: Server },
+  { title: "Security", path: "/security", icon: Shield },
   { title: "Scopes", path: "/scopes", icon: Shield },
 ];
 

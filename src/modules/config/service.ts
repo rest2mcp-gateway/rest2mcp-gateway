@@ -12,6 +12,19 @@ const validateDraftContext = (context: Awaited<ReturnType<typeof configRepositor
     issues.push("At least one MCP server is required");
   }
 
+  if (
+    context.mcpServers.some((server) => server.accessMode === "protected") &&
+    !context.authServerConfig
+  ) {
+    issues.push("A protected MCP server requires an authorization server configuration");
+  }
+
+  if (
+    context.mcpServers.some((server) => server.accessMode === "protected" && !server.audience)
+  ) {
+    issues.push("Every protected MCP server must define an audience");
+  }
+
   if (context.tools.some((tool) => !context.mcpServers.some((server) => server.id === tool.mcpServerId))) {
     issues.push("Every tool must reference an existing MCP server");
   }
@@ -58,6 +71,7 @@ export const configService = {
     const snapshot = {
       version,
       generatedAt: new Date().toISOString(),
+      authServerConfig: context.authServerConfig,
       backendApis: context.backendApis,
       backendResources: context.backendResources,
       mcpServers: context.mcpServers,

@@ -408,7 +408,7 @@ const ensureMcpServerForOrganization = async (
     .limit(1);
 
   if (!row) {
-    throw new AppError(400, "Target MCP server not found", "mcp_server_not_found");
+    throw new AppError(404, "Target MCP server not found", "mcp_server_not_found");
   }
 
   return row;

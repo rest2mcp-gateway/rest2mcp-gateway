@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { getMcpRuntimeUrl, mcpRuntimeApi, mcpServersApi, organizationsApi } from "@/services/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ErrorState, FieldLabel, LoadingState, PageHeader } from "@/components/shared";
 
@@ -18,6 +19,7 @@ export default function McpServerTestPage() {
   const [lastInitializeResponse, setLastInitializeResponse] = useState("");
   const [lastListToolsRequest, setLastListToolsRequest] = useState("{}");
   const [lastListToolsResponse, setLastListToolsResponse] = useState("");
+  const [bearerToken, setBearerToken] = useState("");
 
   const serverQuery = useQuery({
     queryKey: ["mcp-server", id],
@@ -45,7 +47,7 @@ export default function McpServerTestPage() {
         params: {}
       };
       setLastInitializeRequest(prettyJson(payload));
-      const response = await mcpRuntimeApi.call<unknown>(organizationSlug, server.slug, payload);
+      const response = await mcpRuntimeApi.call<unknown>(organizationSlug, server.slug, payload, bearerToken || undefined);
       setLastInitializeResponse(prettyJson(response));
       return response;
     },
@@ -68,7 +70,7 @@ export default function McpServerTestPage() {
         params: {}
       };
       setLastListToolsRequest(prettyJson(payload));
-      const response = await mcpRuntimeApi.call<unknown>(organizationSlug, server.slug, payload);
+      const response = await mcpRuntimeApi.call<unknown>(organizationSlug, server.slug, payload, bearerToken || undefined);
       setLastListToolsResponse(prettyJson(response));
       return response;
     },
@@ -131,6 +133,20 @@ export default function McpServerTestPage() {
           />
         </CardContent>
       </Card>
+
+      {server?.accessMode === "protected" ? (
+        <Card className="mb-6">
+          <CardContent className="p-5 space-y-2">
+            <FieldLabel required>Bearer Token</FieldLabel>
+            <Input
+              type="password"
+              value={bearerToken}
+              onChange={(event) => setBearerToken(event.target.value)}
+              placeholder="Enter an access token for this protected MCP server"
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

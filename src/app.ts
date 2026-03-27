@@ -31,6 +31,7 @@ import { executionLogRoutes } from "./modules/execution-logs/route.js";
 import { frontendRoutes } from "./modules/frontend/route.js";
 import { runtimeRoutes } from "./modules/runtime/route.js";
 import { openApiImportRoutes } from "./modules/openapi-import/route.js";
+import { securityRoutes } from "./modules/security/route.js";
 
 export const buildApp = async () => {
   const app = Fastify({
@@ -80,6 +81,7 @@ export const buildApp = async () => {
     await adminApp.register(scopeRoutes, { prefix: "/scopes" });
     await adminApp.register(toolMappingRoutes, { prefix: "/tool-mappings" });
     await adminApp.register(secretRoutes, { prefix: "/secrets" });
+    await adminApp.register(securityRoutes, { prefix: "/security" });
     await adminApp.register(configRoutes, { prefix: "/config" });
     await adminApp.register(auditRoutes, { prefix: "/audit-events" });
     await adminApp.register(executionLogRoutes, { prefix: "/execution-logs" });

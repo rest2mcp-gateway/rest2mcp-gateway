@@ -27,7 +27,7 @@ const getToolForOrganization = async (app: FastifyInstance, organizationId: stri
     .limit(1);
 
   if (!row) {
-    throw new AppError(400, "Tool not found", "tool_not_found");
+    throw new AppError(404, "Tool not found", "tool_not_found");
   }
 
   return row.tool;
@@ -45,7 +45,7 @@ const getResourceForOrganization = async (app: FastifyInstance, organizationId: 
     .limit(1);
 
   if (!row) {
-    throw new AppError(400, "Backend resource not found", "backend_resource_not_found");
+    throw new AppError(404, "Backend resource not found", "backend_resource_not_found");
   }
 
   return row;

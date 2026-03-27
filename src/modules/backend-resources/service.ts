@@ -31,7 +31,7 @@ const getBackendApiForOrganization = async (
     .limit(1);
 
   if (!row) {
-    throw new AppError(400, "Backend API not found", "backend_api_not_found");
+    throw new AppError(404, "Backend API not found", "backend_api_not_found");
   }
 
   return row;

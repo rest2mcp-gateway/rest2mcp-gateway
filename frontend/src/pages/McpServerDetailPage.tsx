@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState, ErrorState, LoadingState, PageHeader, StatusBadge, FieldLabel } from "@/components/shared";
-import type { McpServerFormData, ServerAuthMode } from "@/types/api";
+import type { McpServerFormData } from "@/types/api";
 
 export default function McpServerDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -52,6 +52,8 @@ export default function McpServerDetailPage() {
     title: "",
     description: "",
     authMode: "local",
+    accessMode: "public",
+    audience: "",
     isActive: true
   });
 
@@ -67,6 +69,8 @@ export default function McpServerDetailPage() {
       title: server.title,
       description: server.description ?? "",
       authMode: server.authMode,
+      accessMode: server.accessMode,
+      audience: server.audience ?? "",
       isActive: server.isActive
     });
   }, [server]);
@@ -183,12 +187,12 @@ export default function McpServerDetailPage() {
 
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-1.5">
-                  <FieldLabel required>Auth Mode</FieldLabel>
-                  <Select value={form.authMode} onValueChange={(value) => updateField("authMode", value as ServerAuthMode)}>
+                  <FieldLabel required>Access Mode</FieldLabel>
+                  <Select value={form.accessMode} onValueChange={(value) => updateField("accessMode", value as McpServerFormData["accessMode"])}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="local">Local</SelectItem>
-                      <SelectItem value="oidc">OIDC</SelectItem>
+                      <SelectItem value="public">Public</SelectItem>
+                      <SelectItem value="protected">Protected</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -197,6 +201,19 @@ export default function McpServerDetailPage() {
                   <Label>Active</Label>
                 </div>
               </div>
+
+              {form.accessMode === "protected" ? (
+                <div className="space-y-1.5">
+                  <FieldLabel required>Audience</FieldLabel>
+                  <Input
+                    value={form.audience ?? ""}
+                    onChange={(event) => updateField("audience", event.target.value)}
+                    className="font-mono text-sm"
+                    placeholder="https://api.example.com/mcp/crypto"
+                  />
+                  <p className="text-xs text-muted-foreground">Protected servers validate JWT bearer tokens against this audience.</p>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 

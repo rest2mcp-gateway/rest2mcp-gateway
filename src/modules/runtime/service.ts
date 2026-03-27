@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { ListToolsRequestSchema, CallToolRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { AppError } from "../../lib/errors.js";
 import { decryptSecret } from "../../lib/crypto.js";
 import { runtimeRepository } from "./repository.js";
@@ -7,6 +9,14 @@ import { runtimeRepository } from "./repository.js";
 const MCP_PROTOCOL_VERSION = "2024-11-05";
 
 type JsonObject = Record<string, unknown>;
+
+type SnapshotAuthServerConfig = {
+  id: string;
+  organizationId: string;
+  issuer: string;
+  jwksUri: string;
+  authorizationServerMetadataUrl?: string | null;
+};
 
 type SnapshotBackendApi = {
   id: string;
@@ -45,6 +55,8 @@ type SnapshotMcpServer = {
   title: string;
   description: string | null;
   authMode: string;
+  accessMode: string;
+  audience: string | null;
   isActive: boolean;
 };
 
@@ -79,6 +91,7 @@ type SnapshotToolMapping = {
 type RuntimeSnapshot = {
   version: number;
   generatedAt: string;
+  authServerConfig: SnapshotAuthServerConfig | null;
   backendApis: SnapshotBackendApi[];
   backendResources: SnapshotBackendResource[];
   mcpServers: SnapshotMcpServer[];
@@ -98,6 +111,7 @@ type CompiledRuntimeServer = {
   organizationSlug: string;
   snapshotVersion: number;
   generatedAt: string;
+  authServerConfig: SnapshotAuthServerConfig | null;
   server: SnapshotMcpServer;
   toolsByName: Map<string, CompiledRuntimeTool>;
   tools: CompiledRuntimeTool[];
@@ -387,6 +401,7 @@ const compileSnapshot = (
       organizationSlug,
       snapshotVersion: snapshot.version,
       generatedAt: snapshot.generatedAt,
+      authServerConfig: snapshot.authServerConfig,
       server,
       tools: serverTools,
       toolsByName: new Map(serverTools.map((entry) => [entry.tool.name, entry]))
@@ -401,6 +416,7 @@ const parseSnapshotJson = (value: unknown): RuntimeSnapshot => {
   return {
     version: typeof object.version === "number" ? object.version : 0,
     generatedAt: typeof object.generatedAt === "string" ? object.generatedAt : new Date().toISOString(),
+    authServerConfig: object.authServerConfig ? (object.authServerConfig as SnapshotAuthServerConfig) : null,
     backendApis: Array.isArray(object.backendApis) ? (object.backendApis as SnapshotBackendApi[]) : [],
     backendResources: Array.isArray(object.backendResources) ? (object.backendResources as SnapshotBackendResource[]) : [],
     mcpServers: Array.isArray(object.mcpServers) ? (object.mcpServers as SnapshotMcpServer[]) : [],
@@ -691,5 +707,40 @@ export const runtimeService = {
 
   invalidateOrganizationCache(organizationSlug: string) {
     runtimeCache.delete(organizationSlug);
+  },
+
+  createSdkServer(
+    app: FastifyInstance,
+    runtimeServer: CompiledRuntimeServer
+  ) {
+    const server = new Server(
+      {
+        name: runtimeServer.server.slug,
+        version: runtimeServer.server.version
+      },
+      {
+        capabilities: {
+          tools: {
+            listChanged: false
+          }
+        }
+      }
+    );
+
+    server.setRequestHandler(ListToolsRequestSchema, async () =>
+      this.listTools(app, runtimeServer.organizationSlug, runtimeServer.server.slug)
+    );
+
+    server.setRequestHandler(CallToolRequestSchema, async (request) =>
+      this.callTool(
+        app,
+        runtimeServer.organizationSlug,
+        runtimeServer.server.slug,
+        request.params.name,
+        request.params.arguments
+      )
+    );
+
+    return server;
   }
 };

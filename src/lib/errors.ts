@@ -17,6 +17,15 @@ export const errorHandler = (
   _request: FastifyRequest,
   reply: FastifyReply
 ) => {
+  if ("statusCode" in error && error.statusCode === 400) {
+    return reply.status(400).send({
+      error: {
+        code: "validation_error",
+        message: error.message || "Request validation failed"
+      }
+    });
+  }
+
   if (error instanceof ZodError) {
     return reply.status(400).send({
       error: {

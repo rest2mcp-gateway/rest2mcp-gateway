@@ -22,6 +22,7 @@ const McpServerTestPage = lazy(() => import("./pages/McpServerTestPage"));
 const MappingDetailPage = lazy(() => import("./pages/MappingDetailPage"));
 const ToolDetailPage = lazy(() => import("./pages/ToolDetailPage"));
 const ToolTestPage = lazy(() => import("./pages/ToolTestPage"));
+const SecurityPage = lazy(() => import("./pages/SecurityPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -68,6 +69,7 @@ const App = () => (
               <Route path="/mappings" element={<ProtectedPage><MappingsPage /></ProtectedPage>} />
               <Route path="/mappings/:id" element={<ProtectedPage><MappingDetailPage /></ProtectedPage>} />
               <Route path="/mcp-servers" element={<ProtectedPage><McpServersPage /></ProtectedPage>} />
+              <Route path="/security" element={<ProtectedPage><SecurityPage /></ProtectedPage>} />
               <Route path="/mcp-servers/:id" element={<ProtectedPage><McpServerDetailPage /></ProtectedPage>} />
               <Route path="/mcp-servers/:id/test" element={<ProtectedPage><McpServerTestPage /></ProtectedPage>} />
               <Route path="/mcp-servers/:serverId/tools/:toolId" element={<ProtectedPage><ToolDetailPage /></ProtectedPage>} />

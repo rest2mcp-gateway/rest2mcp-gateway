@@ -3,6 +3,7 @@ export type ApiKeyPlacement = "header" | "query";
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 export type RiskLevel = "low" | "medium" | "high" | "critical" | string;
 export type ServerAuthMode = "local" | "oidc";
+export type McpAccessMode = "public" | "protected";
 
 export interface PaginationMeta {
   page: number;
@@ -85,7 +86,19 @@ export interface McpServer {
   title: string;
   description?: string | null;
   authMode: ServerAuthMode;
+  accessMode: McpAccessMode;
+  audience?: string | null;
   isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AuthServerConfig {
+  id?: string;
+  organizationId?: string;
+  issuer: string;
+  jwksUri: string;
+  authorizationServerMetadataUrl?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -206,6 +219,7 @@ export interface OpenApiImportResult {
 export type BackendApiFormData = Omit<BackendApi, "id" | "organizationId" | "createdAt" | "updatedAt">;
 export type BackendResourceFormData = Omit<BackendResource, "id" | "createdAt" | "updatedAt">;
 export type McpServerFormData = Omit<McpServer, "id" | "organizationId" | "createdAt" | "updatedAt">;
+export type AuthServerConfigFormData = Omit<AuthServerConfig, "id" | "organizationId" | "createdAt" | "updatedAt">;
 export type ScopeFormData = Omit<Scope, "id" | "organizationId" | "createdAt" | "updatedAt">;
 export type ToolMappingFormData = Omit<ToolMapping, "id" | "createdAt" | "updatedAt">;
 export type ToolFormData = Omit<Tool, "id" | "createdAt" | "updatedAt" | "mapping"> & {

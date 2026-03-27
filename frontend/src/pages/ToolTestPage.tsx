@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { getMcpRuntimeUrl, mcpRuntimeApi, mcpServersApi, organizationsApi, toolsApi } from "@/services/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ErrorState, FieldLabel, LoadingState, PageHeader } from "@/components/shared";
 
@@ -88,6 +89,7 @@ export default function ToolTestPage() {
 
   const [requestBody, setRequestBody] = useState("");
   const [responseBody, setResponseBody] = useState("");
+  const [bearerToken, setBearerToken] = useState("");
 
   useEffect(() => {
     if (initialRequestBody) {
@@ -101,7 +103,7 @@ export default function ToolTestPage() {
         throw new Error("Organization slug or server is not available");
       }
       const payload = JSON.parse(requestBody) as unknown;
-      const response = await mcpRuntimeApi.call<unknown>(organizationSlug, server.slug, payload);
+      const response = await mcpRuntimeApi.call<unknown>(organizationSlug, server.slug, payload, bearerToken || undefined);
       setResponseBody(prettyJson(response));
       return response;
     },
@@ -167,6 +169,20 @@ export default function ToolTestPage() {
             <p className="mt-1 font-mono text-xs text-muted-foreground">
               {organizationSlug && server ? getMcpRuntimeUrl(organizationSlug, server.slug) : "Resolving organization slug..."}
             </p>
+          </div>
+
+          <div className="space-y-1.5">
+            {server?.accessMode === "protected" ? (
+              <>
+                <FieldLabel required>Bearer Token</FieldLabel>
+                <Input
+                  type="password"
+                  value={bearerToken}
+                  onChange={(event) => setBearerToken(event.target.value)}
+                  placeholder="Enter an access token for this protected MCP server"
+                />
+              </>
+            ) : null}
           </div>
 
           <div className="space-y-1.5">

@@ -1,6 +1,7 @@
 import { desc, eq, inArray } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import {
+  authServerConfigs,
   backendApis,
   backendResources,
   mcpServers,
@@ -15,7 +16,8 @@ import {
 
 export const configRepository = {
   getDraftContext: async (app: FastifyInstance, organizationId: string) => {
-    const [backendApiRows, mcpServerRows, scopeRows, secretRows, snapshotRows] = await Promise.all([
+    const [authServerConfigRows, backendApiRows, mcpServerRows, scopeRows, secretRows, snapshotRows] = await Promise.all([
+      app.db.select().from(authServerConfigs).where(eq(authServerConfigs.organizationId, organizationId)).limit(1),
       app.db.select().from(backendApis).where(eq(backendApis.organizationId, organizationId)),
       app.db.select().from(mcpServers).where(eq(mcpServers.organizationId, organizationId)),
       app.db.select().from(scopes).where(eq(scopes.organizationId, organizationId)),
@@ -46,6 +48,7 @@ export const configRepository = {
     ]);
 
     return {
+      authServerConfig: authServerConfigRows[0] ?? null,
       backendApis: backendApiRows,
       backendResources: backendResourceRows,
       mcpServers: mcpServerRows,

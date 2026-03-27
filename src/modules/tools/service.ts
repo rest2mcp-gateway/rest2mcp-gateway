@@ -148,7 +148,7 @@ const getBackendResourceForOrganization = async (app: FastifyInstance, organizat
     .limit(1);
 
   if (!row) {
-    throw new AppError(400, "Backend resource not found", "backend_resource_not_found");
+    throw new AppError(404, "Backend resource not found", "backend_resource_not_found");
   }
 
   return row;

@@ -5,6 +5,8 @@ import {
   type AuthUser
 } from "@/lib/auth";
 import type {
+  AuthServerConfig,
+  AuthServerConfigFormData,
   BackendApi,
   BackendApiFormData,
   BackendResource,
@@ -174,11 +176,12 @@ async function requestPaginated<T>(path: string, query?: Record<string, string |
   };
 }
 
-async function requestRuntime<T>(path: string, payload: unknown): Promise<T> {
+async function requestRuntime<T>(path: string, payload: unknown, accessToken?: string): Promise<T> {
   const res = await fetch(path, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
     },
     body: JSON.stringify(payload)
   });
@@ -237,6 +240,16 @@ export const organizationsApi = {
     listAllPages("/organizations")
 };
 
+export const securityApi = {
+  getAuthServer: async (): Promise<AuthServerConfig | null> =>
+    request("/security/auth-server"),
+  saveAuthServer: async (data: AuthServerConfigFormData): Promise<AuthServerConfig> =>
+    request("/security/auth-server", {
+      method: "PUT",
+      body: JSON.stringify(data)
+    })
+};
+
 export const configApi = {
   validate: async (): Promise<ConfigValidationResult> =>
     request(`/config/validate/${getOrganizationId()}`),
@@ -284,8 +297,8 @@ export const openApiImportApi = {
 };
 
 export const mcpRuntimeApi = {
-  call: async <T>(organizationSlug: string, serverSlug: string, payload: unknown): Promise<T> =>
-    requestRuntime(getMcpRuntimeUrl(organizationSlug, serverSlug), payload)
+  call: async <T>(organizationSlug: string, serverSlug: string, payload: unknown, accessToken?: string): Promise<T> =>
+    requestRuntime(getMcpRuntimeUrl(organizationSlug, serverSlug), payload, accessToken)
 };
 
 export const backendApisApi = {

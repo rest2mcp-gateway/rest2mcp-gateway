@@ -36,6 +36,18 @@ export const organizations = pgTable("organizations", {
   slugIdx: uniqueIndex("organizations_slug_idx").on(table.slug)
 }));
 
+export const authServerConfigs = pgTable("auth_server_configs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  issuer: text("issuer").notNull(),
+  jwksUri: text("jwks_uri").notNull(),
+  authorizationServerMetadataUrl: text("authorization_server_metadata_url"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date())
+}, (table) => ({
+  orgIdx: uniqueIndex("auth_server_configs_org_idx").on(table.organizationId)
+}));
+
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
@@ -108,6 +120,8 @@ export const mcpServers = pgTable("mcp_servers", {
   title: text("title").notNull(),
   description: text("description"),
   authMode: authModeEnum("auth_mode").notNull().default("local"),
+  accessMode: text("access_mode").notNull().default("public"),
+  audience: text("audience"),
   isActive: boolean("is_active").notNull().default(true),
   ...timestamps
 }, (table) => ({
