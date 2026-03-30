@@ -11,7 +11,7 @@ import {
   validatorCompiler
 } from "fastify-type-provider-zod";
 import { env } from "./config/env.js";
-import { loggerConfig } from "./lib/logger.js";
+import { formatCompletedRequestLog, formatIncomingRequestLog, loggerConfig } from "./lib/logger.js";
 import { errorHandler } from "./lib/errors.js";
 import { registerDb } from "./db/client.js";
 import { bootstrapLocalAdmin } from "./modules/auth/bootstrap.js";
@@ -36,6 +36,7 @@ import { securityRoutes } from "./modules/security/route.js";
 export const buildApp = async () => {
   const app = Fastify({
     logger: loggerConfig,
+    disableRequestLogging: true,
     ajv: {
       customOptions: {
         removeAdditional: false,
@@ -47,6 +48,16 @@ export const buildApp = async () => {
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
   app.setErrorHandler(errorHandler);
+
+  app.addHook("onRequest", async (request) => {
+    request.startedAt = Date.now();
+    app.log.info(formatIncomingRequestLog(request));
+  });
+
+  app.addHook("onResponse", async (request, reply) => {
+    const startedAt = request.startedAt ?? Date.now();
+    app.log.info(formatCompletedRequestLog(request, reply.statusCode, Date.now() - startedAt));
+  });
 
   await app.register(cors, { origin: true, credentials: true });
   await app.register(sensible);
