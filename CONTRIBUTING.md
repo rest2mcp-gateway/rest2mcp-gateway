@@ -39,6 +39,8 @@ Expected workflow:
 
 The local `pre-push` hook intentionally skips backend integration tests because they require opening local listeners and can be environment-sensitive. Those integration tests still run in GitHub Actions.
 
+For release preparation, use the checklist in [`docs/release-checklist.md`](docs/release-checklist.md).
+
 ## Current Enforcement Policy
 
 - Do not relax TypeScript strictness to make builds pass unless the change is explicitly reviewed.

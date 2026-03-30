@@ -1,0 +1,33 @@
+name: Feature request
+description: Propose a new capability or meaningful enhancement.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: Explain the user problem or workflow gap.
+      placeholder: What are you trying to do that is not supported well today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the change you want to see.
+      placeholder: A concise proposal for the new behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: List current workarounds or other approaches you considered.
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add links, examples, or implementation notes if useful.
+

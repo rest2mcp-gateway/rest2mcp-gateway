@@ -35,6 +35,13 @@ playwright-report/
 frontend/playwright-report/
 test-results/
 frontend/test-results/
+tests/**/*.js
+tests/**/*.cjs
+tests/**/*.mjs
+tests/**/*.d.ts
+tests/**/*.js.map
+tests/**/*.cjs.map
+tests/**/*.mjs.map
 
 # Tool and editor files
 .DS_Store
