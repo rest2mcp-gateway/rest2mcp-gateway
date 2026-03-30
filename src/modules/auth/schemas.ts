@@ -1,14 +1,14 @@
 import { z } from "zod";
 
 export const loginBodySchema = z.object({
-  email: z.string().email(),
+  username: z.string().min(1),
   password: z.string().min(1)
 });
 
 export const authUserSchema = z.object({
   id: z.string().uuid(),
   organizationId: z.string().uuid(),
-  email: z.string().email(),
+  username: z.string().min(1),
   name: z.string(),
   role: z.enum(["super_admin", "admin", "editor", "viewer"]),
   authMode: z.enum(["local", "oidc"]),

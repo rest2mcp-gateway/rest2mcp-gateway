@@ -222,12 +222,12 @@ async function listAllPages<T>(path: string, baseQuery?: Record<string, string |
 }
 
 export const authApi = {
-  login: async (email: string, password: string): Promise<LoginResponse> =>
+  login: async (username: string, password: string): Promise<LoginResponse> =>
     request("/auth/login", {
       method: "POST",
       includeAuth: false,
       handleUnauthorized: false,
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ username, password })
     }),
   me: async (): Promise<{ user: AuthUser }> =>
     request("/auth/me")

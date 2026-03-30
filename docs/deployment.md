@@ -16,10 +16,9 @@ In production, the main concerns are stability, explicit secrets, and predictabl
 
 At minimum:
 
-- provide real values for `JWT_SECRET`
 - provide a real `SECRET_ENCRYPTION_KEY`
-- provide a real `BOOTSTRAP_ADMIN_PASSWORD` when `AUTH_MODE=local`
-- point the product at the right persistent database
+- provide a real `BOOTSTRAP_ADMIN_PASSWORD`
+- use persistent storage for the embedded database, which defaults to `./data/db`
 
 ## Build and start
 
@@ -39,8 +38,9 @@ npm start
 
 - the supported deployment path is a direct Node.js process
 - the server includes the admin UI, admin API, and runtime endpoints
-- if you use local file-backed storage, make sure `PGLITE_DATA_DIR` points to persistent storage
-- if you use PostgreSQL, set `DATABASE_PROVIDER=postgres` and provide `DATABASE_URL`
+- the documented storage path is the embedded PGlite database
+- make sure the embedded database path is on persistent storage; by default this is `./data/db`
+- the application persists its admin JWT signing secret in the database, encrypted with `SECRET_ENCRYPTION_KEY`
 - the application runs in production mode when started with production configuration, so required secrets must be provided explicitly
 
 ## Recommended next step

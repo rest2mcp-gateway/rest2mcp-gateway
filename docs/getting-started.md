@@ -29,13 +29,14 @@ cp .env.example .env
 
 For an initial local run, the default values are usually enough.
 
-Local development is designed to reduce setup friction:
+The documented database path is the embedded PGlite store at `./data/db`. Override `PGLITE_DATA_DIR` only if you need a different location.
 
-- a JWT secret can be generated in memory if not provided
-- an encryption key can be generated and persisted locally
-- a bootstrap admin password can be generated and persisted locally
+Set explicit values for:
 
-If `AUTH_MODE=local` and `BOOTSTRAP_ADMIN_PASSWORD` is empty, the generated password is stored in `./data/dev-secrets.json`.
+- `SECRET_ENCRYPTION_KEY`
+- `BOOTSTRAP_ADMIN_PASSWORD`
+
+On first startup, the app generates its JWT signing secret automatically and stores it encrypted in the database.
 
 ## 2. Install dependencies
 
@@ -57,15 +58,15 @@ http://localhost:3000
 
 ## 4. Sign in
 
-Use the bootstrap admin email configured in `.env`.
+Use the bootstrap admin username configured in `.env`.
 
 Default example:
 
 ```text
-admin@example.com
+admin
 ```
 
-If you left the bootstrap password empty, read the generated value from `./data/dev-secrets.json`.
+Use the bootstrap password from `.env`.
 
 ## 5. Create your first publishable configuration
 

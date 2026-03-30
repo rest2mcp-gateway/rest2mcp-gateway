@@ -3,9 +3,9 @@ import type { FastifyInstance } from "fastify";
 import { users } from "../../db/schema.js";
 
 export const authRepository = {
-  findByEmail: (app: FastifyInstance, email: string) =>
+  findByUsername: (app: FastifyInstance, username: string) =>
     app.db.query.users.findFirst({
-      where: eq(users.email, email)
+      where: eq(users.username, username)
     }),
   findById: (app: FastifyInstance, id: string) =>
     app.db.query.users.findFirst({

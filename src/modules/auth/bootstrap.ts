@@ -6,13 +6,7 @@ import { env } from "../../config/env.js";
 import { organizations, users } from "../../db/schema.js";
 
 export const bootstrapLocalAdmin = async (app: FastifyInstance) => {
-  if (env.AUTH_MODE !== "local") {
-    return;
-  }
   const bootstrapAdminPassword = env.BOOTSTRAP_ADMIN_PASSWORD;
-  if (!bootstrapAdminPassword) {
-    throw new Error("BOOTSTRAP_ADMIN_PASSWORD must be configured when AUTH_MODE=local");
-  }
 
   const existingOrg = await app.db.query.organizations.findFirst({
     where: eq(organizations.slug, env.BOOTSTRAP_ORG_SLUG)
@@ -29,20 +23,20 @@ export const bootstrapLocalAdmin = async (app: FastifyInstance) => {
   }
 
   const existingUser = await app.db.query.users.findFirst({
-    where: eq(users.email, env.BOOTSTRAP_ADMIN_EMAIL)
+    where: eq(users.username, env.BOOTSTRAP_ADMIN_USERNAME)
   });
 
   if (!existingUser) {
     const passwordHash = await bcrypt.hash(bootstrapAdminPassword, 12);
     await app.db.insert(users).values({
       organizationId,
-      email: env.BOOTSTRAP_ADMIN_EMAIL,
+      username: env.BOOTSTRAP_ADMIN_USERNAME,
       name: env.BOOTSTRAP_ADMIN_NAME,
       role: "super_admin",
       authMode: "local",
       passwordHash,
       isActive: true
     });
-    app.log.info({ email: env.BOOTSTRAP_ADMIN_EMAIL }, "bootstrapped local admin");
+    app.log.info({ username: env.BOOTSTRAP_ADMIN_USERNAME }, "bootstrapped local admin");
   }
 };

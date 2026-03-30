@@ -3,7 +3,7 @@ import { paginationSchema } from "../../lib/pagination.js";
 
 export const userCreateSchema = z.object({
   organizationId: z.string().uuid(),
-  email: z.string().email(),
+  username: z.string().min(1),
   name: z.string().min(1),
   role: z.enum(["super_admin", "admin", "editor", "viewer"]),
   authMode: z.enum(["local", "oidc"]),

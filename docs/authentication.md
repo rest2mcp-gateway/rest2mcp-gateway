@@ -12,16 +12,19 @@ Rest2MC Gateway separates administrator access to the product from runtime acces
 
 ## Authentication modes
 
-The product supports two authentication modes at the user level:
+The currently implemented admin authentication flow is `local`.
 
-- `local`
-- `oidc`
+With `local` authentication:
 
-For local development and first-time setup, `local` authentication is the active path used by the product bootstrap flow.
+- administrators sign in with username and password
+- the admin API issues a JWT for the session
+- protected admin endpoints validate that JWT on subsequent requests
+
+The data model already includes an `oidc` auth mode value for future expansion, but this repository does not currently expose an OIDC sign-in flow.
 
 ## Local bootstrap admin
 
-When `AUTH_MODE=local`, Rest2MC Gateway can create an initial local administrator automatically on startup using the bootstrap settings in `.env`.
+Rest2MC Gateway creates an initial local administrator automatically on startup using the bootstrap settings in `.env`.
 
 That bootstrap flow creates:
 
@@ -70,9 +73,9 @@ These roles are enforced on admin endpoints. Examples:
 
 ## Recommended practice
 
-For local evaluation, `AUTH_MODE=local` is the fastest path.
+For local evaluation, the built-in local username/password flow is the fastest path.
 
-For more controlled environments:
+For the current implementation:
 
 - use explicit secret values
 - limit who receives publish-capable roles

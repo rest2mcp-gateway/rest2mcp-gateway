@@ -36,6 +36,13 @@ CREATE TABLE IF NOT EXISTS organizations (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS organizations_slug_idx ON organizations (slug);
 
+CREATE TABLE IF NOT EXISTS app_settings (
+  key text PRIMARY KEY,
+  encrypted_value text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS auth_server_configs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
@@ -50,7 +57,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS auth_server_configs_org_idx ON auth_server_con
 CREATE TABLE IF NOT EXISTS users (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  email text NOT NULL,
+  username text NOT NULL,
   name text NOT NULL,
   role user_role NOT NULL,
   auth_mode auth_mode NOT NULL,
@@ -59,7 +66,7 @@ CREATE TABLE IF NOT EXISTS users (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-CREATE UNIQUE INDEX IF NOT EXISTS users_org_email_idx ON users (organization_id, email);
+CREATE UNIQUE INDEX IF NOT EXISTS users_org_username_idx ON users (organization_id, username);
 CREATE INDEX IF NOT EXISTS users_org_idx ON users (organization_id);
 
 CREATE TABLE IF NOT EXISTS backend_apis (

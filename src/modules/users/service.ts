@@ -17,7 +17,7 @@ export const userService = {
       action: "user.create",
       entityType: "user",
       entityId: row.id,
-      payload: { email: row.email, role: row.role }
+      payload: { username: row.username, role: row.role }
     });
     return row;
   },

@@ -5,7 +5,7 @@ export const UNAUTHORIZED_EVENT = "rest-to-mcp:unauthorized";
 export type AuthUser = {
   id: string;
   organizationId: string;
-  email: string;
+  username: string;
   name: string;
   role: "super_admin" | "admin" | "editor" | "viewer";
   authMode: "local" | "oidc";

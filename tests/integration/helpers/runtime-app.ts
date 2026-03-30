@@ -13,12 +13,9 @@ type TestAppHandle = {
 const TEST_ENV = {
   NODE_ENV: "test",
   DATABASE_PROVIDER: "pglite",
-  JWT_SECRET: "test-jwt-secret-1234567890",
   SECRET_ENCRYPTION_KEY: "test-secret-encryption-key-1234567890",
-  AUTH_MODE: "local",
-  BOOTSTRAP_ORG_NAME: "Runtime Test Org",
   BOOTSTRAP_ORG_SLUG: "runtime-test-org",
-  BOOTSTRAP_ADMIN_EMAIL: "admin@test.local",
+  BOOTSTRAP_ADMIN_USERNAME: "admin",
   BOOTSTRAP_ADMIN_NAME: "Runtime Test Admin",
   BOOTSTRAP_ADMIN_PASSWORD: "test-password-123"
 } as const;

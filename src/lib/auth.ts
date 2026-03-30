@@ -6,7 +6,7 @@ export type AuthClaims = {
   sub: string;
   organizationId: string;
   role: UserRole;
-  email: string;
+  username: string;
 };
 
 declare module "@fastify/jwt" {

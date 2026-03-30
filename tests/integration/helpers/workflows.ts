@@ -39,7 +39,7 @@ type McpServerOptions =
     };
 
 const TEST_ADMIN = {
-  email: "admin@test.local",
+  username: "admin",
   password: "test-password-123",
   organizationSlug: "runtime-test-org"
 } as const;
@@ -110,7 +110,7 @@ export const loginAsBootstrapAdmin = async (app: FastifyInstance): Promise<Admin
     method: "POST",
     url: "/api/admin/v1/auth/login",
     payload: {
-      email: TEST_ADMIN.email,
+      username: TEST_ADMIN.username,
       password: TEST_ADMIN.password
     }
   });

@@ -53,7 +53,7 @@ test("requireRoles enforces allowed roles", async () => {
       sub: "user-1",
       organizationId: "org-1",
       role: "viewer",
-      email: "viewer@example.com"
+      username: "viewer"
     }
   } as FastifyRequest;
 

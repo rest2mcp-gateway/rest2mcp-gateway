@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import type { FastifyInstance } from "fastify";
 import { users } from "../../db/schema.js";
@@ -6,7 +6,7 @@ import { listEntities } from "../common/crud.js";
 
 type UserWriteInput = {
   organizationId: string;
-  email: string;
+  username: string;
   name: string;
   role: "super_admin" | "admin" | "editor" | "viewer";
   authMode: "local" | "oidc";
@@ -15,7 +15,7 @@ type UserWriteInput = {
 };
 
 type UserUpdateInput = {
-  email?: string | undefined;
+  username?: string | undefined;
   name?: string | undefined;
   role?: "super_admin" | "admin" | "editor" | "viewer" | undefined;
   authMode?: "local" | "oidc" | undefined;
@@ -25,12 +25,12 @@ type UserUpdateInput = {
 
 export const userRepository = {
   list: (app: FastifyInstance, query: { organizationId?: string | undefined; page: number; pageSize: number; search?: string | undefined; isActive?: boolean | undefined }) =>
-    listEntities(app, users, { ...query, searchColumn: "email" }),
+    listEntities(app, users, { ...query, searchColumn: "username" }),
   create: async (app: FastifyInstance, values: UserWriteInput) => {
     const passwordHash = values.password ? await bcrypt.hash(values.password, 12) : null;
     const [row] = await app.db.insert(users).values({
       organizationId: values.organizationId,
-      email: values.email,
+      username: values.username,
       name: values.name,
       role: values.role,
       authMode: values.authMode,
@@ -44,7 +44,7 @@ export const userRepository = {
   update: async (app: FastifyInstance, id: string, values: UserUpdateInput) => {
     const passwordHash = values.password ? await bcrypt.hash(values.password, 12) : undefined;
     const [row] = await app.db.update(users).set({
-      email: values.email,
+      username: values.username,
       name: values.name,
       role: values.role,
       authMode: values.authMode,

@@ -14,8 +14,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       body: loginBodySchema
     }
   }, async (request) => {
-    const { email, password } = loginBodySchema.parse(request.body);
-    const result = await authService.login(app, email, password);
+    const { username, password } = loginBodySchema.parse(request.body);
+    const result = await authService.login(app, username, password);
     return ok({
       token: result.token,
       user: authUserSchema.parse(serializeAuthUser(result.user))

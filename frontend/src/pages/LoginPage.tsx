@@ -18,7 +18,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, isAuthenticated, isLoading } = useAuth();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -33,7 +33,7 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      await login(email, password);
+      await login(username, password);
       navigate(targetPath, { replace: true });
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : "Login failed");
@@ -59,16 +59,16 @@ export default function LoginPage() {
           <CardContent>
             <form className="space-y-5" onSubmit={handleSubmit}>
               <div className="space-y-2">
-                <FieldLabel htmlFor="email" required>Email</FieldLabel>
+                <FieldLabel htmlFor="username" required>Username</FieldLabel>
                 <div className="relative">
                   <User className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
                   <Input
-                    id="email"
-                    type="email"
-                    autoComplete="email"
+                    id="username"
+                    type="text"
+                    autoComplete="username"
                     className="pl-9"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
                     required
                   />
                 </div>

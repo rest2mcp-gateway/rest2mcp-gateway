@@ -84,7 +84,7 @@ export function AppSidebar() {
         {!collapsed && (
           <div className="space-y-3">
             <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-sidebar-muted">
-              <div className="truncate text-sidebar-foreground">{user?.email}</div>
+              <div className="truncate text-sidebar-foreground">{user?.username}</div>
               <div><span className="font-mono">v0.1.0</span> · RestToMCP Studio</div>
             </div>
             <Button type="button" variant="outline" size="sm" className="w-full justify-start border-white/10 bg-white/[0.03] text-sidebar-foreground hover:bg-white/[0.06]" onClick={logout}>

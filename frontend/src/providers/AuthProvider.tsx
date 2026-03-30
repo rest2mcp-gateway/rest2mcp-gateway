@@ -20,7 +20,7 @@ type AuthContextValue = {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => void;
 };
 
@@ -45,10 +45,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user: session?.user ?? null,
     isAuthenticated: Boolean(session?.accessToken),
     isLoading,
-    login: async (email: string, password: string) => {
+    login: async (username: string, password: string) => {
       setIsLoading(true);
       try {
-        const result = await authApi.login(email, password);
+        const result = await authApi.login(username, password);
         const nextSession = {
           accessToken: result.token,
           user: result.user

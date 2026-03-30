@@ -61,9 +61,9 @@ Prerequisites:
 
 Notes:
 
-- The default setup uses local file-backed storage so you can get running quickly.
-- In local development, some secrets can be generated automatically if you leave them empty.
-- If `AUTH_MODE=local` and `BOOTSTRAP_ADMIN_PASSWORD` is blank, a password is generated once and stored in `./data/dev-secrets.json`.
+- The default setup uses the embedded PGlite database so you can get running quickly.
+- `SECRET_ENCRYPTION_KEY` and `BOOTSTRAP_ADMIN_PASSWORD` must be set explicitly in `.env`.
+- The application generates its admin JWT signing secret on first startup and stores it encrypted in the database.
 
 ### 2. Install dependencies
 
@@ -87,13 +87,13 @@ Open the app in your browser:
 http://localhost:3000
 ```
 
-Use the bootstrap admin email from `.env`:
+Use the bootstrap admin username from `.env`:
 
 ```text
-admin@example.com
+admin
 ```
 
-If you left `BOOTSTRAP_ADMIN_PASSWORD` empty, check `./data/dev-secrets.json` for the generated password.
+Use the bootstrap password from `.env`.
 
 ### 5. Publish your first gateway configuration
 
@@ -111,13 +111,9 @@ A typical first run looks like this:
 
 ## Local development behavior
 
-For local development, Rest2MC Gateway is intentionally forgiving:
+For local development, Rest2MC Gateway still expects explicit `SECRET_ENCRYPTION_KEY` and `BOOTSTRAP_ADMIN_PASSWORD` values.
 
-- a JWT secret can be generated in memory if not provided
-- an encryption key can be generated and persisted for local use
-- a bootstrap admin password can be generated and persisted for local use
-
-Those local-only generated values are meant to speed up first startup. For production, set explicit values.
+The one generated credential is the admin JWT signing secret, which is created automatically on first startup and stored encrypted in the database.
 
 ## Production-style deployment
 
@@ -126,7 +122,7 @@ The currently supported deployment path is a direct Node.js process.
 For a more persistent deployment:
 
 1. Set real secret values in `.env`.
-2. Point the app at your production database.
+2. Use the default embedded database path `./data/db`, or override it only if you need a different location.
 3. Build the application.
 4. Start the server.
 
@@ -140,9 +136,10 @@ npm start
 Deployment notes:
 
 - the application serves the admin UI, admin API, and runtime endpoints from the same server process
-- if you use `DATABASE_PROVIDER=pglite`, make sure `PGLITE_DATA_DIR` points to persistent storage
-- if you use `DATABASE_PROVIDER=postgres`, set a production `DATABASE_URL`
-- in production with `AUTH_MODE=local`, `JWT_SECRET`, `SECRET_ENCRYPTION_KEY`, and `BOOTSTRAP_ADMIN_PASSWORD` must be set explicitly
+- the documented database path is the embedded PGlite store
+- the default embedded database path is `./data/db`; override `PGLITE_DATA_DIR` only if you need a different persistent location
+- in every environment, `SECRET_ENCRYPTION_KEY` and `BOOTSTRAP_ADMIN_PASSWORD` must be set explicitly
+- the JWT signing secret is generated once and stored encrypted in the database
 - container packaging may be added later, but it is not the primary supported distribution path today
 
 ## Useful commands

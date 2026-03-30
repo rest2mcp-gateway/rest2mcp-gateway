@@ -36,6 +36,12 @@ export const organizations = pgTable("organizations", {
   slugIdx: uniqueIndex("organizations_slug_idx").on(table.slug)
 }));
 
+export const appSettings = pgTable("app_settings", {
+  key: text("key").primaryKey(),
+  encryptedValue: text("encrypted_value").notNull(),
+  ...timestamps
+});
+
 export const authServerConfigs = pgTable("auth_server_configs", {
   id: uuid("id").primaryKey().defaultRandom(),
   organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
@@ -51,7 +57,7 @@ export const authServerConfigs = pgTable("auth_server_configs", {
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
-  email: text("email").notNull(),
+  username: text("username").notNull(),
   name: text("name").notNull(),
   role: userRoleEnum("role").notNull(),
   authMode: authModeEnum("auth_mode").notNull(),
@@ -59,7 +65,7 @@ export const users = pgTable("users", {
   isActive: boolean("is_active").notNull().default(true),
   ...timestamps
 }, (table) => ({
-  orgEmailIdx: uniqueIndex("users_org_email_idx").on(table.organizationId, table.email),
+  orgUsernameIdx: uniqueIndex("users_org_username_idx").on(table.organizationId, table.username),
   orgIdx: index("users_org_idx").on(table.organizationId)
 }));
 
