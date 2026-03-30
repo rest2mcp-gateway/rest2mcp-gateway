@@ -16,7 +16,7 @@ type RuntimeServerAuthConfig = {
 
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 
-const getJwks = (jwksUri: string) => {
+export const getJwks = (jwksUri: string) => {
   const existing = jwksCache.get(jwksUri);
   if (existing) {
     return existing;
@@ -27,7 +27,7 @@ const getJwks = (jwksUri: string) => {
   return next;
 };
 
-const getBearerToken = (authorizationHeader?: string) => {
+export const getBearerToken = (authorizationHeader?: string) => {
   if (!authorizationHeader) {
     return null;
   }
@@ -59,7 +59,7 @@ export const buildUnauthorizedChallenge = (
   serverSlug: string
 ) => `Bearer resource_metadata="${getProtectedResourceMetadataUrl(request, organizationSlug, serverSlug)}"`;
 
-const parseTokenScopes = (value: unknown) => {
+export const parseTokenScopes = (value: unknown) => {
   if (typeof value === "string") {
     return value.split(/\s+/).map((scope) => scope.trim()).filter(Boolean);
   }

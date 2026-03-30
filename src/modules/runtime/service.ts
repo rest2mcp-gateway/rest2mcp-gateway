@@ -8,7 +8,7 @@ import { runtimeRepository } from "./repository.js";
 
 const MCP_PROTOCOL_VERSION = "2024-11-05";
 
-type JsonObject = Record<string, unknown>;
+export type JsonObject = Record<string, unknown>;
 
 type SnapshotAuthServerConfig = {
   id: string;
@@ -18,7 +18,7 @@ type SnapshotAuthServerConfig = {
   authorizationServerMetadataUrl?: string | null;
 };
 
-type SnapshotBackendApi = {
+export type SnapshotBackendApi = {
   id: string;
   organizationId: string;
   name: string;
@@ -32,7 +32,7 @@ type SnapshotBackendApi = {
   isActive: boolean;
 };
 
-type SnapshotBackendResource = {
+export type SnapshotBackendResource = {
   id: string;
   backendApiId: string;
   name: string;
@@ -46,7 +46,7 @@ type SnapshotBackendResource = {
   isActive: boolean;
 };
 
-type SnapshotMcpServer = {
+export type SnapshotMcpServer = {
   id: string;
   organizationId: string;
   name: string;
@@ -60,7 +60,7 @@ type SnapshotMcpServer = {
   isActive: boolean;
 };
 
-type SnapshotTool = {
+export type SnapshotTool = {
   id: string;
   mcpServerId: string;
   name: string;
@@ -74,7 +74,7 @@ type SnapshotTool = {
   isActive: boolean;
 };
 
-type SnapshotToolMapping = {
+export type SnapshotToolMapping = {
   id: string;
   toolId: string;
   backendApiId: string;
@@ -88,7 +88,7 @@ type SnapshotToolMapping = {
   isActive: boolean;
 };
 
-type SnapshotScope = {
+export type SnapshotScope = {
   id: string;
   organizationId: string;
   name: string;
@@ -97,12 +97,12 @@ type SnapshotScope = {
   isSensitive: boolean;
 };
 
-type SnapshotToolScope = {
+export type SnapshotToolScope = {
   toolId: string;
   scopeId: string;
 };
 
-type RuntimeSnapshot = {
+export type RuntimeSnapshot = {
   version: number;
   generatedAt: string;
   authServerConfig: SnapshotAuthServerConfig | null;
@@ -115,7 +115,7 @@ type RuntimeSnapshot = {
   toolScopes: SnapshotToolScope[];
 };
 
-type CompiledRuntimeTool = {
+export type CompiledRuntimeTool = {
   tool: SnapshotTool;
   mapping: SnapshotToolMapping;
   backendApi: SnapshotBackendApi;
@@ -123,7 +123,7 @@ type CompiledRuntimeTool = {
   requiredScopes: string[];
 };
 
-type CompiledRuntimeServer = {
+export type CompiledRuntimeServer = {
   organizationId: string;
   organizationSlug: string;
   snapshotVersion: number;
@@ -143,12 +143,12 @@ type RuntimeCacheEntry = {
 
 const runtimeCache = new Map<string, RuntimeCacheEntry>();
 
-const asObject = (value: unknown): JsonObject =>
+export const asObject = (value: unknown): JsonObject =>
   value && typeof value === "object" && !Array.isArray(value)
     ? (value as JsonObject)
     : {};
 
-const parseRetryCount = (value: unknown) => {
+export const parseRetryCount = (value: unknown) => {
   const candidate =
     value && typeof value === "object" && !Array.isArray(value)
       ? (value as { retries?: unknown }).retries
@@ -157,7 +157,7 @@ const parseRetryCount = (value: unknown) => {
 };
 
 const templateKeyPattern = "[a-zA-Z_][a-zA-Z0-9_-]*";
-const getResolvedSecret = (authConfig: JsonObject, encryptedKey: string, legacyKey: string) => {
+export const getResolvedSecret = (authConfig: JsonObject, encryptedKey: string, legacyKey: string) => {
   const encrypted = authConfig[encryptedKey];
   if (typeof encrypted === "string" && encrypted.length > 0) {
     return decryptSecret(encrypted);
@@ -167,7 +167,7 @@ const getResolvedSecret = (authConfig: JsonObject, encryptedKey: string, legacyK
   return typeof legacy === "string" && legacy.length > 0 ? legacy : undefined;
 };
 
-const interpolateString = (template: string, input: JsonObject) =>
+export const interpolateString = (template: string, input: JsonObject) =>
   template
     .replace(new RegExp(`{{\\s*(${templateKeyPattern})\\s*}}`, "g"), (_match, key: string) => {
       const value = input[key];
@@ -184,13 +184,13 @@ const interpolateString = (template: string, input: JsonObject) =>
       return String(value);
     });
 
-const renderPathTemplate = (template: string, input: JsonObject) =>
+export const renderPathTemplate = (template: string, input: JsonObject) =>
   interpolateString(
     template.replace(new RegExp(`(?<!\\{)\\{(${templateKeyPattern})\\}(?!\\})`, "g"), "{{$1}}"),
     input
   );
 
-const replaceRawPlaceholders = (template: string, input: JsonObject) => {
+export const replaceRawPlaceholders = (template: string, input: JsonObject) => {
   let inString = false;
   let escaped = false;
   let index = 0;
@@ -260,7 +260,7 @@ const replaceRawPlaceholders = (template: string, input: JsonObject) => {
   return result;
 };
 
-const interpolateObjectStrings = (value: unknown, input: JsonObject): unknown => {
+export const interpolateObjectStrings = (value: unknown, input: JsonObject): unknown => {
   if (typeof value === "string") {
     return interpolateString(value, input);
   }
@@ -278,17 +278,17 @@ const interpolateObjectStrings = (value: unknown, input: JsonObject): unknown =>
   return value;
 };
 
-const renderBodyTemplate = (template: string, input: JsonObject): unknown => {
+export const renderBodyTemplate = (template: string, input: JsonObject): unknown => {
   const parsed = JSON.parse(replaceRawPlaceholders(template, input)) as unknown;
   return interpolateObjectStrings(parsed, input);
 };
 
-const joinUrl = (baseUrl: string, path: string) => {
+export const joinUrl = (baseUrl: string, path: string) => {
   const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
   return new URL(path.startsWith("/") ? path.slice(1) : path, normalizedBase);
 };
 
-const applyAuthConfig = (targetUrl: URL, headers: Headers, backendApi: SnapshotBackendApi) => {
+export const applyAuthConfig = (targetUrl: URL, headers: Headers, backendApi: SnapshotBackendApi) => {
   const authConfig = asObject(backendApi.authConfig);
 
   switch (backendApi.authType) {
@@ -332,14 +332,14 @@ const applyAuthConfig = (targetUrl: URL, headers: Headers, backendApi: SnapshotB
   }
 };
 
-const normalizeToolArguments = (value: unknown) => {
+export const normalizeToolArguments = (value: unknown) => {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return {};
   }
   return value as JsonObject;
 };
 
-const parseBackendResponse = async (response: Response) => {
+export const parseBackendResponse = async (response: Response) => {
   const contentType = response.headers.get("content-type") ?? "";
   if (contentType.includes("application/json")) {
     return response.json() as Promise<unknown>;
@@ -349,7 +349,7 @@ const parseBackendResponse = async (response: Response) => {
   return text;
 };
 
-const createContentBlocks = (value: unknown) => {
+export const createContentBlocks = (value: unknown) => {
   if (typeof value === "string") {
     return [{ type: "text", text: value }];
   }
@@ -357,7 +357,7 @@ const createContentBlocks = (value: unknown) => {
   return [{ type: "text", text: JSON.stringify(value, null, 2) }];
 };
 
-const redactUrlForLog = (url: URL, backendApi: SnapshotBackendApi) => {
+export const redactUrlForLog = (url: URL, backendApi: SnapshotBackendApi) => {
   const authConfig = asObject(backendApi.authConfig);
   if (backendApi.authType !== "api_key" || authConfig.in !== "query" || typeof authConfig.name !== "string") {
     return url.toString();
@@ -370,7 +370,7 @@ const redactUrlForLog = (url: URL, backendApi: SnapshotBackendApi) => {
   return redacted.toString();
 };
 
-const compileSnapshot = (
+export const compileSnapshot = (
   organizationSlug: string,
   snapshot: RuntimeSnapshot
 ): Map<string, CompiledRuntimeServer> => {
@@ -439,7 +439,7 @@ const compileSnapshot = (
   return serversBySlug;
 };
 
-const parseSnapshotJson = (value: unknown): RuntimeSnapshot => {
+export const parseSnapshotJson = (value: unknown): RuntimeSnapshot => {
   const object = asObject(value);
   return {
     version: typeof object.version === "number" ? object.version : 0,

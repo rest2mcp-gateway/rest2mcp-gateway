@@ -10,8 +10,8 @@ After TypeScript or behavior changes, run the relevant checks and prefer the ful
 
 ```bash
 npm run typecheck
-npm run build
 npm run test:backend:unit
+npm run build
 npm run test:backend:integration
 npm run test:frontend
 npm run lint:frontend

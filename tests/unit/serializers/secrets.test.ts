@@ -1,8 +1,8 @@
-import test from "node:test";
 import assert from "node:assert/strict";
-import { serializeSecret } from "../src/modules/secrets/serializer.js";
+import test from "node:test";
+import { serializeSecret } from "../../../src/modules/secrets/serializer.js";
 
-test("secret serializer never exposes plaintext or encrypted value", () => {
+test("serializeSecret never exposes plaintext or encrypted value", () => {
   const serialized = serializeSecret({
     id: "sec_1",
     encryptedValue: "ciphertext",

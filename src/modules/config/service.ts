@@ -5,7 +5,9 @@ import { organizations } from "../../db/schema.js";
 import { configRepository } from "./repository.js";
 import { runtimeService } from "../runtime/service.js";
 
-const validateDraftContext = (context: Awaited<ReturnType<typeof configRepository.getDraftContext>>) => {
+export type DraftContext = Awaited<ReturnType<typeof configRepository.getDraftContext>>;
+
+export const validateDraftContext = (context: DraftContext) => {
   const issues: string[] = [];
 
   if (context.mcpServers.length === 0) {

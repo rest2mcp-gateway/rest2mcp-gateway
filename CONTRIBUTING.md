@@ -33,7 +33,7 @@ Expected workflow:
 
 1. Commit locally as often as needed.
 2. Keep commits small and coherent.
-3. Let `pre-commit` catch fast type regressions.
+3. Let `pre-commit` catch fast type and backend unit-test regressions.
 4. Let `pre-push` block pushes if build, backend unit tests, frontend tests, or frontend lint are red.
 5. Push only when the branch is in a releasable state.
 
