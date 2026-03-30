@@ -9,6 +9,10 @@ export const bootstrapLocalAdmin = async (app: FastifyInstance) => {
   if (env.AUTH_MODE !== "local") {
     return;
   }
+  const bootstrapAdminPassword = env.BOOTSTRAP_ADMIN_PASSWORD;
+  if (!bootstrapAdminPassword) {
+    throw new Error("BOOTSTRAP_ADMIN_PASSWORD must be configured when AUTH_MODE=local");
+  }
 
   const existingOrg = await app.db.query.organizations.findFirst({
     where: eq(organizations.slug, env.BOOTSTRAP_ORG_SLUG)
@@ -29,7 +33,7 @@ export const bootstrapLocalAdmin = async (app: FastifyInstance) => {
   });
 
   if (!existingUser) {
-    const passwordHash = await bcrypt.hash(env.BOOTSTRAP_ADMIN_PASSWORD, 12);
+    const passwordHash = await bcrypt.hash(bootstrapAdminPassword, 12);
     await app.db.insert(users).values({
       organizationId,
       email: env.BOOTSTRAP_ADMIN_EMAIL,

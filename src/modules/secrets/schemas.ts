@@ -3,9 +3,9 @@ import { paginationSchema } from "../../lib/pagination.js";
 
 const applySecretValidation = (
   value: {
-    storageMode?: "database" | "external_ref";
-    externalRef?: string;
-    plaintextValue?: string;
+    storageMode?: "database" | "external_ref" | undefined;
+    externalRef?: string | undefined;
+    plaintextValue?: string | undefined;
   },
   ctx: z.RefinementCtx
 ) => {

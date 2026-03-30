@@ -125,10 +125,11 @@ export const validateRuntimeAccessToken = async (
   }
 
   try {
-    const result = await jwtVerify(token, getJwks(authServerConfig.jwksUri), {
-      issuer: authServerConfig.issuer,
-      audience: runtimeServer.audience ?? undefined
-    });
+    const verifyOptions =
+      runtimeServer.audience
+        ? { issuer: authServerConfig.issuer, audience: runtimeServer.audience }
+        : { issuer: authServerConfig.issuer };
+    const result = await jwtVerify(token, getJwks(authServerConfig.jwksUri), verifyOptions);
     return result.payload;
   } catch (error) {
     throw new AppError(401, error instanceof Error ? error.message : "Invalid access token", "runtime_auth_invalid_token", {

@@ -4,7 +4,7 @@ import { secrets } from "../../db/schema.js";
 import { listEntities } from "../common/crud.js";
 
 export const secretRepository = {
-  list: (app: FastifyInstance, query: { organizationId?: string; page: number; pageSize: number; search?: string }) =>
+  list: (app: FastifyInstance, query: { organizationId?: string | undefined; page: number; pageSize: number; search?: string | undefined }) =>
     listEntities(app, secrets, { ...query, searchColumn: "name" }),
   create: (app: FastifyInstance, values: typeof secrets.$inferInsert) =>
     app.db.insert(secrets).values(values).returning(),

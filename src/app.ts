@@ -34,6 +34,11 @@ import { openApiImportRoutes } from "./modules/openapi-import/route.js";
 import { securityRoutes } from "./modules/security/route.js";
 
 export const buildApp = async () => {
+  const jwtSecret = env.JWT_SECRET;
+  if (!jwtSecret) {
+    throw new Error("JWT_SECRET must be configured");
+  }
+
   const app = Fastify({
     logger: loggerConfig,
     disableRequestLogging: true,
@@ -61,7 +66,7 @@ export const buildApp = async () => {
 
   await app.register(cors, { origin: true, credentials: true });
   await app.register(sensible);
-  await app.register(jwt, { secret: env.JWT_SECRET });
+  await app.register(jwt, { secret: jwtSecret });
   await app.register(swagger, {
     openapi: {
       openapi: "3.1.0",

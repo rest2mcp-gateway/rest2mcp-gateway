@@ -6,4 +6,6 @@ declare module "fastify" {
   }
 }
 
+declare module "pg";
+
 export {};

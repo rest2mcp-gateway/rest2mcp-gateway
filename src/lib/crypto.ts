@@ -2,7 +2,13 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
 import { env } from "../config/env.js";
 
 const algorithm = "aes-256-gcm";
-const key = createHash("sha256").update(env.SECRET_ENCRYPTION_KEY).digest();
+const secretEncryptionKey = env.SECRET_ENCRYPTION_KEY;
+
+if (!secretEncryptionKey) {
+  throw new Error("SECRET_ENCRYPTION_KEY must be configured");
+}
+
+const key = createHash("sha256").update(secretEncryptionKey).digest();
 
 export const encryptSecret = (value: string) => {
   const iv = randomBytes(12);

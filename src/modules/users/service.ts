@@ -7,6 +7,9 @@ export const userService = {
   list: userRepository.list,
   async create(app: FastifyInstance, actorId: string, values: Parameters<typeof userRepository.create>[1]) {
     const row = await userRepository.create(app, values);
+    if (!row) {
+      throw new Error("Failed to create user");
+    }
     await writeAuditEvent(app, {
       organizationId: row.organizationId,
       actorType: "user",

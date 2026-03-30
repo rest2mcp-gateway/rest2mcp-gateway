@@ -11,13 +11,15 @@ import * as schema from "./schema.js";
 
 export type DatabaseProvider = "postgres" | "pglite";
 export type AppDatabase = NodePgDatabase<typeof schema> | PgliteDatabase<typeof schema>;
+type OptionalPool = Pool | undefined;
+type OptionalPGlite = PGlite | undefined;
 
 declare module "fastify" {
   interface FastifyInstance {
     db: AppDatabase;
     dbProvider: DatabaseProvider;
-    pg?: Pool;
-    pglite?: PGlite;
+    pg: OptionalPool;
+    pglite: OptionalPGlite;
   }
 }
 
@@ -60,6 +62,9 @@ export const createDatabase = async (): Promise<BootstrapResult> => {
 };
 
 export const registerDb = fp(async (app) => {
+  const decorate = (property: string, value: unknown) =>
+    (app.decorate as (this: typeof app, property: string, value: unknown) => void).call(app, property, value);
+
   app.log.info({ provider: env.DATABASE_PROVIDER }, "initializing database provider");
   app.log.debug({
     provider: env.DATABASE_PROVIDER,
@@ -69,14 +74,14 @@ export const registerDb = fp(async (app) => {
 
   const database = await createDatabase();
 
-  app.decorate("db", database.db);
-  app.decorate("dbProvider", database.provider);
+  decorate("db", database.db);
+  decorate("dbProvider", database.provider);
 
   if (database.provider === "postgres") {
-    app.decorate("pg", database.pg);
+    decorate("pg", database.pg);
     app.log.info("database provider ready: postgres");
   } else {
-    app.decorate("pglite", database.pglite);
+    decorate("pglite", database.pglite);
     if (database.initialized) {
       app.log.info({ dataDir: resolve(env.PGLITE_DATA_DIR) }, "pglite schema initialized");
     } else {

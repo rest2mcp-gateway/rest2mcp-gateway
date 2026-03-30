@@ -4,7 +4,7 @@ import { organizations } from "../../db/schema.js";
 import { listEntities } from "../common/crud.js";
 
 export const organizationRepository = {
-  list: (app: FastifyInstance, query: { page: number; pageSize: number; search?: string }) =>
+  list: (app: FastifyInstance, query: { page: number; pageSize: number; search?: string | undefined }) =>
     listEntities(app, organizations, { ...query, searchColumn: "name" }),
   getById: (app: FastifyInstance, id: string) =>
     app.db.query.organizations.findFirst({ where: eq(organizations.id, id) }),

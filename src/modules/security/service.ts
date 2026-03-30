@@ -7,7 +7,7 @@ import { maybeAutoPublishDraft } from "../config/auto-publish.js";
 type AuthServerConfigInput = {
   issuer: string;
   jwksUri: string;
-  authorizationServerMetadataUrl?: string;
+  authorizationServerMetadataUrl?: string | undefined;
 };
 
 export const securityService = {
@@ -35,6 +35,10 @@ export const securityService = {
         ))
         .returning();
 
+      if (!row) {
+        throw new Error("Failed to update auth server config");
+      }
+
       await writeAuditEvent(app, {
         organizationId,
         actorType: "user",
@@ -53,6 +57,10 @@ export const securityService = {
       organizationId,
       ...values
     }).returning();
+
+    if (!row) {
+      throw new Error("Failed to create auth server config");
+    }
 
     await writeAuditEvent(app, {
       organizationId,

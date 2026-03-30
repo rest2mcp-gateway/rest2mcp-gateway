@@ -9,11 +9,11 @@ export const secretService = {
   async create(app: FastifyInstance, actorId: string, values: {
     organizationId: string;
     name: string;
-    description?: string;
+    description?: string | undefined;
     secretType: "api_key" | "token" | "password" | "certificate" | "other";
     storageMode: "database" | "external_ref";
-    externalRef?: string;
-    plaintextValue?: string;
+    externalRef?: string | undefined;
+    plaintextValue?: string | undefined;
     keyVersion: number;
     metadata: Record<string, unknown>;
   }) {
@@ -28,6 +28,10 @@ export const secretService = {
       keyVersion: values.keyVersion,
       metadata: values.metadata
     });
+
+    if (!row) {
+      throw new Error("Failed to create secret");
+    }
 
     await writeAuditEvent(app, {
       organizationId: values.organizationId,

@@ -98,6 +98,9 @@ export const configService = {
       createdBy: actorId,
       publishedAt: new Date()
     });
+    if (!snapshotRow) {
+      throw new Error("Failed to insert runtime snapshot");
+    }
 
     await configRepository.insertPublishEvent(app, {
       organizationId,

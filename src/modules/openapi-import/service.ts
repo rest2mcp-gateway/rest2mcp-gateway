@@ -13,10 +13,10 @@ type JsonObject = Record<string, unknown>;
 type PreviewInput = {
   name: string;
   slug: string;
-  description?: string;
+  description?: string | undefined;
   defaultBaseUrl: string;
   specText: string;
-  targetMcpServerId?: string;
+  targetMcpServerId?: string | undefined;
 };
 
 type ImportInput = PreviewInput & {

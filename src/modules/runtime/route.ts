@@ -91,12 +91,11 @@ export const runtimeRoutes: FastifyPluginAsync = async (app) => {
           }
         }
 
-        const transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: undefined
-        });
         const server = runtimeService.createSdkServer(app, runtimeServer);
+        const transport = new StreamableHTTPServerTransport({});
+        transport.onclose = () => {};
 
-        await server.connect(transport);
+        await server.connect(transport as Parameters<typeof server.connect>[0]);
         await transport.handleRequest(
           request.raw,
           reply.raw,

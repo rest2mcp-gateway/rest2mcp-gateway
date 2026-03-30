@@ -4,12 +4,12 @@ import type { FastifyInstance } from "fastify";
 import { toOffset } from "../../lib/pagination.js";
 
 type ListOptions = {
-  organizationId?: string;
+  organizationId?: string | undefined;
   page: number;
   pageSize: number;
-  search?: string;
-  searchColumn?: string;
-  isActive?: boolean;
+  search?: string | undefined;
+  searchColumn?: string | undefined;
+  isActive?: boolean | undefined;
 };
 
 export const listEntities = async (
@@ -30,7 +30,8 @@ export const listEntities = async (
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
   const rows = await app.db.select().from(table).where(where).limit(options.pageSize).offset(toOffset(options.page, options.pageSize)).orderBy(asc((table as Record<string, any>).createdAt));
-  const [{ total }] = await app.db.select({ total: count() }).from(table).where(where);
+  const [totalRow] = await app.db.select({ total: count() }).from(table).where(where);
+  const total = totalRow?.total ?? 0;
 
   return {
     rows,

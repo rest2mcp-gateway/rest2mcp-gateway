@@ -1,4 +1,4 @@
-import type { FastifyError, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyError } from "fastify";
 import { ZodError } from "zod";
 
 export class AppError extends Error {
@@ -12,10 +12,14 @@ export class AppError extends Error {
   }
 }
 
+type ReplyLike = {
+  status(code: number): { send(payload: unknown): unknown };
+};
+
 export const errorHandler = (
   error: FastifyError | Error,
-  _request: FastifyRequest,
-  reply: FastifyReply
+  _request: unknown,
+  reply: ReplyLike
 ) => {
   if ("statusCode" in error && error.statusCode === 400) {
     return reply.status(400).send({

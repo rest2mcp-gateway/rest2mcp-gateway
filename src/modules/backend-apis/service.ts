@@ -8,23 +8,23 @@ import { backendApiRepository } from "./repository.js";
 type JsonObject = Record<string, unknown>;
 
 type BackendApiInput = {
-  organizationId?: string;
-  name?: string;
-  slug?: string;
-  description?: string;
-  defaultBaseUrl?: string;
-  authType?: "none" | "api_key" | "basic" | "bearer" | "oauth2";
-  authConfig?: Record<string, unknown>;
-  apiKeyLocation?: "header" | "query";
-  apiKeyName?: string;
-  apiKeyValue?: string;
-  bearerToken?: string;
-  basicUsername?: string;
-  basicPassword?: string;
-  oauth2AccessToken?: string;
-  defaultTimeoutMs?: number;
-  retryPolicy?: Record<string, unknown>;
-  isActive?: boolean;
+  organizationId?: string | undefined;
+  name?: string | undefined;
+  slug?: string | undefined;
+  description?: string | undefined;
+  defaultBaseUrl?: string | undefined;
+  authType?: "none" | "api_key" | "basic" | "bearer" | "oauth2" | undefined;
+  authConfig?: Record<string, unknown> | undefined;
+  apiKeyLocation?: "header" | "query" | undefined;
+  apiKeyName?: string | undefined;
+  apiKeyValue?: string | undefined;
+  bearerToken?: string | undefined;
+  basicUsername?: string | undefined;
+  basicPassword?: string | undefined;
+  oauth2AccessToken?: string | undefined;
+  defaultTimeoutMs?: number | undefined;
+  retryPolicy?: Record<string, unknown> | undefined;
+  isActive?: boolean | undefined;
 };
 
 const asObject = (value: unknown): JsonObject =>
@@ -139,7 +139,11 @@ export const backendApiService = {
   list: backendApiRepository.list,
   async create(app: FastifyInstance, actorId: string, organizationId: string, values: BackendApiInput) {
     const persistedValues = buildPersistedValues(values);
-    const [row] = await backendApiRepository.create(app, persistedValues);
+    const createdRows = await backendApiRepository.create(app, persistedValues) as Array<{ id: string } & Record<string, unknown>>;
+    const row = createdRows[0];
+    if (!row) {
+      throw new Error("Failed to create backend_api");
+    }
 
     await writeAuditEvent(app, {
       organizationId,
@@ -161,7 +165,8 @@ export const backendApiService = {
     }
 
     const persistedValues = buildPersistedValues(values, existing);
-    const [row] = await backendApiRepository.update(app, id, persistedValues);
+    const updatedRows = await backendApiRepository.update(app, id, persistedValues) as Array<{ id: string } & Record<string, unknown>>;
+    const row = updatedRows[0];
     if (!row) {
       throw new AppError(404, "backend_api not found", "backend_api_not_found");
     }

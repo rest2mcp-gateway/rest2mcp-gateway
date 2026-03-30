@@ -3,10 +3,10 @@ import type { FastifyInstance } from "fastify";
 import { backendApis, backendResources } from "../../db/schema.js";
 
 type ListQuery = {
-  backendApiId?: string;
+  backendApiId?: string | undefined;
   page: number;
   pageSize: number;
-  search?: string;
+  search?: string | undefined;
 };
 
 export const backendResourceRepository = {

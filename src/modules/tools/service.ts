@@ -198,7 +198,7 @@ const syncToolMapping = async (
     return;
   }
 
-  await app.db.insert(toolMappings).values(omitUndefined(values));
+    await app.db.insert(toolMappings).values(values);
 };
 
 export const toolService = {

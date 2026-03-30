@@ -7,16 +7,16 @@ import { maybeAutoPublishDraft } from "../config/auto-publish.js";
 import { backendResourceRepository } from "./repository.js";
 
 type BackendResourceWriteInput = {
-  backendApiId?: string;
-  name?: string;
-  operationId?: string;
-  description?: string;
-  httpMethod?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-  pathTemplate?: string;
-  bodyTemplate?: string;
-  requestSchema?: Record<string, unknown>;
-  responseSchema?: Record<string, unknown>;
-  isActive?: boolean;
+  backendApiId?: string | undefined;
+  name?: string | undefined;
+  operationId?: string | undefined;
+  description?: string | undefined;
+  httpMethod?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | undefined;
+  pathTemplate?: string | undefined;
+  bodyTemplate?: string | undefined;
+  requestSchema?: Record<string, unknown> | undefined;
+  responseSchema?: Record<string, unknown> | undefined;
+  isActive?: boolean | undefined;
 };
 
 const getBackendApiForOrganization = async (
@@ -41,15 +41,20 @@ const omitUndefined = <T extends Record<string, unknown>>(values: T) =>
   Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined));
 
 export const backendResourceService = {
-  list(app: FastifyInstance, organizationId: string, query: { backendApiId?: string; page: number; pageSize: number; search?: string }) {
+  list(app: FastifyInstance, organizationId: string, query: { backendApiId?: string | undefined; page: number; pageSize: number; search?: string | undefined }) {
     return backendResourceRepository.list(app, organizationId, query);
   },
 
   async create(app: FastifyInstance, actorId: string, organizationId: string, values: Required<Pick<BackendResourceWriteInput, "backendApiId">> & BackendResourceWriteInput) {
-    await getBackendApiForOrganization(app, organizationId, values.backendApiId);
+    const backendApiId = values.backendApiId;
+    if (!backendApiId) {
+      throw new AppError(400, "backendApiId is required", "missing_backend_api_id");
+    }
+
+    await getBackendApiForOrganization(app, organizationId, backendApiId);
 
     const row = await backendResourceRepository.create(app, {
-      backendApiId: values.backendApiId,
+      backendApiId,
       name: values.name ?? "",
       operationId: values.operationId ?? "",
       description: values.description ?? null,
