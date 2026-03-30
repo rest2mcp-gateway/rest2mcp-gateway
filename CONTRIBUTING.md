@@ -6,7 +6,7 @@ This repository uses local Git hooks and GitHub Actions to keep `main` releasabl
 
 - `pre-commit` runs `npm run verify:commit`
 - `pre-push` runs `npm run verify:push`
-- CI runs the same remote enforcement on pushes and pull requests
+- CI runs the full remote enforcement on pushes and pull requests, including backend integration tests
 
 Install dependencies with:
 
@@ -23,7 +23,9 @@ Use these commands during development:
 ```bash
 npm run typecheck
 npm run build
-npm test
+npm run test:backend:unit
+npm run test:backend:integration
+npm run test:frontend
 npm run lint:frontend
 ```
 
@@ -32,8 +34,10 @@ Expected workflow:
 1. Commit locally as often as needed.
 2. Keep commits small and coherent.
 3. Let `pre-commit` catch fast type regressions.
-4. Let `pre-push` block pushes if build, tests, or frontend lint are red.
+4. Let `pre-push` block pushes if build, backend unit tests, frontend tests, or frontend lint are red.
 5. Push only when the branch is in a releasable state.
+
+The local `pre-push` hook intentionally skips backend integration tests because they require opening local listeners and can be environment-sensitive. Those integration tests still run in GitHub Actions.
 
 ## Current Enforcement Policy
 
@@ -47,6 +51,8 @@ Expected workflow:
 Before opening a pull request, make sure:
 
 - `npm run build` passes
-- `npm test` passes
+- `npm run test:backend:unit` passes
+- `npm run test:backend:integration` passes
+- `npm run test:frontend` passes
 - `npm run lint:frontend` passes
 - any required README or docs changes are included

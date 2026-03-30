@@ -11,7 +11,9 @@ After TypeScript or behavior changes, run the relevant checks and prefer the ful
 ```bash
 npm run typecheck
 npm run build
-npm test
+npm run test:backend:unit
+npm run test:backend:integration
+npm run test:frontend
 npm run lint:frontend
 ```
 
@@ -28,6 +30,7 @@ npm run lint:frontend
 - Assume local hooks and CI are part of the contract.
 - Do not remove or weaken `pre-commit`, `pre-push`, or CI checks without explicit approval.
 - When adding scripts, keep local and CI enforcement aligned.
+- Local `pre-push` should prefer stable checks; backend integration tests may remain CI-only when they depend on local listener availability.
 - If a change intentionally breaks an existing gate, explain why and restore a working replacement in the same change.
 
 ## Documentation Rules

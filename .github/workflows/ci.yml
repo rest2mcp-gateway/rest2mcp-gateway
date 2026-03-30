@@ -29,8 +29,14 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Test
-        run: npm test
+      - name: Backend unit tests
+        run: npm run test:backend:unit
+
+      - name: Backend integration tests
+        run: npm run test:backend:integration
+
+      - name: Frontend tests
+        run: npm run test:frontend
 
       - name: Frontend lint
         run: npm run lint:frontend

@@ -22,7 +22,7 @@
     "test:frontend": "npm run test --workspace frontend",
     "lint:frontend": "npm run lint --workspace frontend",
     "verify:commit": "run-s typecheck",
-    "verify:push": "run-s build test:backend:unit test:backend:integration test:frontend lint:frontend",
+    "verify:push": "run-s build test:backend:unit test:frontend lint:frontend",
     "verify:ci": "run-s build test:backend:unit test:backend:integration test:frontend lint:frontend",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push"
