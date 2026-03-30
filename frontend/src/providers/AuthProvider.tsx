@@ -8,6 +8,7 @@ import {
 } from "react";
 import {
   clearStoredSession,
+  type EnvConfig,
   getStoredSession,
   setStoredSession,
   UNAUTHORIZED_EVENT,
@@ -18,6 +19,7 @@ import { authApi } from "@/services/api-client";
 type AuthContextValue = {
   accessToken: string | null;
   user: AuthUser | null;
+  envConfig: EnvConfig | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
@@ -43,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(() => ({
     accessToken: session?.accessToken ?? null,
     user: session?.user ?? null,
+    envConfig: session?.envConfig ?? null,
     isAuthenticated: Boolean(session?.accessToken),
     isLoading,
     login: async (username: string, password: string) => {
@@ -51,7 +54,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const result = await authApi.login(username, password);
         const nextSession = {
           accessToken: result.token,
-          user: result.user
+          user: result.user,
+          envConfig: result.env_config
         };
         setStoredSession(nextSession);
         setSession(nextSession);

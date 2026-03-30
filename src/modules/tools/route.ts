@@ -45,4 +45,13 @@ export const toolRoutes: FastifyPluginAsync = async (app) => {
     const row = await toolService.update(app, request.user.sub, request.user.organizationId, params.id, body);
     return ok(serializeTool(row));
   });
+
+  app.delete("/:id", {
+    schema: { tags: ["tools"], params: paramsSchema },
+    preHandler: requireRoles(["super_admin", "admin", "editor"])
+  }, async (request) => {
+    const params = paramsSchema.parse(request.params);
+    const row = await toolService.delete(app, request.user.sub, request.user.organizationId, params.id);
+    return ok(serializeTool(row));
+  });
 };

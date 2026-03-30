@@ -4,6 +4,17 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { backendApisApi, resourcesApi, scopesApi, toolsApi } from "@/services/api-client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -338,6 +349,22 @@ export default function ToolDetailPage() {
     }
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => toolsApi.delete(toolId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tools"] });
+      queryClient.invalidateQueries({ queryKey: ["tools", "server-page", serverId] });
+      queryClient.invalidateQueries({ queryKey: ["tools", "server-all", serverId] });
+      queryClient.invalidateQueries({ queryKey: ["tool-mappings"] });
+      queryClient.invalidateQueries({ queryKey: ["mcp-server", serverId] });
+      toast.success("Tool deleted");
+      navigate(`/mcp-servers/${serverId}`);
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Failed to delete tool");
+    }
+  });
+
   const anyError = (!isNew && toolQuery.isError) || scopesQuery.isError || apisQuery.isError;
   const firstError = [toolQuery, scopesQuery, apisQuery].find((query) => query.isError)?.error;
   const anyLoading = (!isNew && toolQuery.isLoading) || scopesQuery.isLoading || apisQuery.isLoading;
@@ -373,7 +400,34 @@ export default function ToolDetailPage() {
       <PageHeader
         title={isNew ? "New Tool" : form.name}
         description={isNew ? "Create a tool for this MCP server" : `Edit tool configuration for ${apisById.get(selectedBackendApiId)?.name ?? "the selected backend"}`}
-        actions={<Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>{saveMutation.isPending ? "Saving..." : "Save"}</Button>}
+        actions={
+          <div className="flex items-center gap-2">
+            {!isNew ? (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" disabled={deleteMutation.isPending}>
+                    <Trash2 className="w-4 h-4 mr-1" /> Delete Tool
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete tool?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This removes the tool and its mapping from the MCP server.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => deleteMutation.mutate()}>
+                      {deleteMutation.isPending ? "Deleting..." : "Delete Tool"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            ) : null}
+            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>{saveMutation.isPending ? "Saving..." : "Save"}</Button>
+          </div>
+        }
       />
 
       <Tabs defaultValue="general">

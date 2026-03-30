@@ -12,9 +12,15 @@ export type AuthUser = {
   isActive: boolean;
 };
 
+export type EnvConfig = {
+  autoPublishDrafts: boolean;
+  mode: "development" | "test" | "production";
+};
+
 export type StoredSession = {
   accessToken: string;
   user: AuthUser;
+  envConfig: EnvConfig;
 };
 
 export const getStoredSession = (): StoredSession | null => {

@@ -36,4 +36,13 @@ export const mcpServerRoutes: FastifyPluginAsync = async (app) => {
     const row = await mcpServerService.update(app, request.user.sub, request.user.organizationId, params.id, body);
     return ok(serializeMcpServer(row));
   });
+
+  app.delete("/:id", {
+    schema: { tags: ["mcp-servers"], params: paramsSchema },
+    preHandler: requireRoles(["super_admin", "admin", "editor"])
+  }, async (request) => {
+    const params = paramsSchema.parse(request.params);
+    const row = await mcpServerService.delete(app, request.user.sub, request.user.organizationId, params.id);
+    return ok(serializeMcpServer(row));
+  });
 };

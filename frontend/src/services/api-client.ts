@@ -2,7 +2,8 @@ import {
   clearStoredSession,
   emitUnauthorizedEvent,
   getStoredSession,
-  type AuthUser
+  type AuthUser,
+  type EnvConfig
 } from "@/lib/auth";
 import type {
   AuthServerConfig,
@@ -40,6 +41,7 @@ type ApiEnvelope<T> = {
 type LoginResponse = {
   token: string;
   user: AuthUser;
+  env_config: EnvConfig;
 };
 
 const getAccessToken = () => getStoredSession()?.accessToken ?? null;
@@ -111,9 +113,10 @@ async function request<T>(
   options?: RequestInit & { includeAuth?: boolean; handleUnauthorized?: boolean }
 ): Promise<T> {
   const accessToken = options?.includeAuth === false ? null : getAccessToken();
+  const hasBody = options?.body !== undefined && options?.body !== null;
   const res = await fetch(`${API_BASE}${path}`, {
     headers: {
-      "Content-Type": "application/json",
+      ...(hasBody ? { "Content-Type": "application/json" } : {}),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...options?.headers
     },
@@ -229,7 +232,7 @@ export const authApi = {
       handleUnauthorized: false,
       body: JSON.stringify({ username, password })
     }),
-  me: async (): Promise<{ user: AuthUser }> =>
+  me: async (): Promise<{ user: AuthUser; env_config: EnvConfig }> =>
     request("/auth/me")
 };
 
@@ -326,6 +329,10 @@ export const backendApisApi = {
     request(`/backend-apis/${id}`, {
       method: "PATCH",
       body: JSON.stringify(normalizeBackendApiPayload(data))
+    }),
+  delete: async (id: string): Promise<BackendApi> =>
+    request(`/backend-apis/${id}`, {
+      method: "DELETE"
     })
 };
 
@@ -343,6 +350,10 @@ export const resourcesApi = {
     request(`/backend-resources/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data)
+    }),
+  delete: async (id: string): Promise<BackendResource> =>
+    request(`/backend-resources/${id}`, {
+      method: "DELETE"
     })
 };
 
@@ -363,6 +374,10 @@ export const scopesApi = {
     request(`/scopes/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data)
+    }),
+  delete: async (id: string): Promise<Scope> =>
+    request(`/scopes/${id}`, {
+      method: "DELETE"
     })
 };
 
@@ -416,6 +431,10 @@ export const mcpServersApi = {
     request(`/mcp-servers/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data)
+    }),
+  delete: async (id: string): Promise<McpServer> =>
+    request(`/mcp-servers/${id}`, {
+      method: "DELETE"
     })
 };
 
@@ -434,6 +453,10 @@ export const toolsApi = {
     request(`/tools/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data)
+    }),
+  delete: async (id: string): Promise<Tool> =>
+    request(`/tools/${id}`, {
+      method: "DELETE"
     }),
   listByServer: async (serverId: string): Promise<Tool[]> =>
     toolsApi.listAll(serverId)

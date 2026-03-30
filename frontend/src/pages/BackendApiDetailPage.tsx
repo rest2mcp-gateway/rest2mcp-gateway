@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { backendApisApi, resourcesApi } from "@/services/api-client";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Layers, Plus } from "lucide-react";
+import { ArrowLeft, Layers, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from "@/components/ui/alert-dialog";
 import { PageHeader, MethodBadge, EmptyState, ErrorState, LoadingState, FieldLabel } from "@/components/shared";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -105,6 +116,34 @@ export default function BackendApiDetailPage() {
     }
   });
 
+  const deleteApiMutation = useMutation({
+    mutationFn: () => backendApisApi.delete(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["backend-apis"] });
+      queryClient.invalidateQueries({ queryKey: ["resources", id] });
+      queryClient.invalidateQueries({ queryKey: ["tools"] });
+      queryClient.invalidateQueries({ queryKey: ["tool-mappings"] });
+      toast.success("Backend API deleted");
+      navigate("/backend-apis");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Failed to delete backend API");
+    }
+  });
+
+  const deleteResourceMutation = useMutation({
+    mutationFn: (resourceId: string) => resourcesApi.delete(resourceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["resources", id] });
+      queryClient.invalidateQueries({ queryKey: ["tools"] });
+      queryClient.invalidateQueries({ queryKey: ["tool-mappings"] });
+      toast.success("Resource deleted");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Failed to delete resource");
+    }
+  });
+
   const updateField = <K extends keyof BackendApiFormData>(key: K, value: BackendApiFormData[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -139,7 +178,34 @@ export default function BackendApiDetailPage() {
       <PageHeader
         title={isNew ? "New Backend API" : form.name}
         description={isNew ? "Register a new REST API backend" : "Edit backend API configuration"}
-        actions={<Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>{saveMutation.isPending ? "Saving..." : "Save"}</Button>}
+        actions={
+          <div className="flex items-center gap-2">
+            {!isNew ? (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" disabled={deleteApiMutation.isPending}>
+                    <Trash2 className="w-4 h-4 mr-1" /> Delete API
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete backend API?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This removes the API, all of its resources, and any tool mappings pointing to them. Tools themselves are kept, but they will become unmapped.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => deleteApiMutation.mutate()}>
+                      {deleteApiMutation.isPending ? "Deleting..." : "Delete API"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            ) : null}
+            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>{saveMutation.isPending ? "Saving..." : "Save"}</Button>
+          </div>
+        }
       />
 
       <Tabs defaultValue="general">
@@ -312,12 +378,35 @@ export default function BackendApiDetailPage() {
                     <div key={resource.id} className="flex items-center justify-between p-3 rounded-md bg-muted">
                       <div className="flex items-center gap-3">
                         <MethodBadge method={resource.httpMethod} />
-                        <div>
+                      <div>
                           <span className="text-sm font-medium text-foreground">{resource.name}</span>
                           <p className="text-xs font-mono text-muted-foreground">{resource.pathTemplate}</p>
                         </div>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => navigate(`/backend-apis/${id}/resources/${resource.id}`)}>Edit</Button>
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => navigate(`/backend-apis/${id}/resources/${resource.id}`)}>Edit</Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm" disabled={deleteResourceMutation.isPending}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete resource?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This removes the backend resource and any tool mappings pointing to it.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => deleteResourceMutation.mutate(resource.id)}>
+                                {deleteResourceMutation.isPending ? "Deleting..." : "Delete Resource"}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
                   ))}
                 </div>

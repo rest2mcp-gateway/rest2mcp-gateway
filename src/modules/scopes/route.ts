@@ -36,4 +36,13 @@ export const scopeRoutes: FastifyPluginAsync = async (app) => {
     const row = await scopeService.update(app, request.user.sub, request.user.organizationId, params.id, body);
     return ok(serializeScope(row));
   });
+
+  app.delete("/:id", {
+    schema: { tags: ["scopes"], params: paramsSchema },
+    preHandler: requireRoles(["super_admin", "admin", "editor"])
+  }, async (request) => {
+    const params = paramsSchema.parse(request.params);
+    const row = await scopeService.delete(app, request.user.sub, request.user.organizationId, params.id);
+    return ok(serializeScope(row));
+  });
 };

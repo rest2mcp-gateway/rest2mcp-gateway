@@ -8,9 +8,19 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useAuth } from "@/providers/AuthProvider";
+
+const formatValidationIssue = (issue: string) => {
+  if (issue === "At least one MCP server is required") {
+    return "Create an MCP server first, then add at least one tool and mapping before publishing.";
+  }
+
+  return issue;
+};
 
 export default function DashboardPage() {
   const queryClient = useQueryClient();
+  const { envConfig } = useAuth();
   const [publishNotes, setPublishNotes] = useState("");
   const apisQuery = useQuery({ queryKey: ["backend-apis", "dashboard"], queryFn: () => backendApisApi.list(1, 5) });
   const serversQuery = useQuery({ queryKey: ["mcp-servers", "dashboard"], queryFn: () => mcpServersApi.list(1, 5) });
@@ -42,6 +52,8 @@ export default function DashboardPage() {
   const toolsTotal = toolsQuery.data?.pagination.total ?? 0;
   const latestSnapshot = snapshotsQuery.data?.[0];
   const validation = validationQuery.data;
+  const validationIssues = validation?.issues.map(formatValidationIssue) ?? [];
+  const autoPublishDrafts = Boolean(envConfig?.autoPublishDrafts);
 
   const anyLoading = apisQuery.isLoading || serversQuery.isLoading;
   const anyError = apisQuery.isError || serversQuery.isError || scopesQuery.isError || toolsQuery.isError || validationQuery.isError || snapshotsQuery.isError;
@@ -140,17 +152,28 @@ export default function DashboardPage() {
                 </h3>
                 <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
                   <div className="space-y-3">
+                    {autoPublishDrafts ? (
+                      <div className="rounded-md border border-border/70 bg-muted/30 p-3">
+                        <div className="text-sm font-medium text-foreground mb-1">Development Auto-Publish</div>
+                        <p className="text-sm text-muted-foreground">
+                          Draft changes are published automatically in development when validation succeeds.
+                        </p>
+                      </div>
+                    ) : null}
+
                     <div className="rounded-md border p-3">
                       <div className="text-sm font-medium text-foreground mb-1">Draft Validation</div>
                       {validationQuery.isLoading ? (
                         <p className="text-sm text-muted-foreground">Checking draft…</p>
                       ) : validation?.valid ? (
-                        <p className="text-sm text-success">Draft is valid and ready to publish.</p>
+                        <p className="text-sm text-success">
+                          {autoPublishDrafts ? "Draft is valid. Development auto-publish can apply the latest changes." : "Draft is valid and ready to publish."}
+                        </p>
                       ) : (
                         <div className="space-y-2">
                           <p className="text-sm text-warning">Draft has validation issues.</p>
                           <ul className="list-disc pl-5 text-sm text-muted-foreground">
-                            {validation?.issues.map((issue) => (
+                            {validationIssues.map((issue) => (
                               <li key={issue}>{issue}</li>
                             ))}
                           </ul>
@@ -163,16 +186,19 @@ export default function DashboardPage() {
                       <Textarea
                         value={publishNotes}
                         onChange={(event) => setPublishNotes(event.target.value)}
-                        placeholder="Optional notes for this snapshot publish"
+                        placeholder={autoPublishDrafts ? "Disabled in development because publish is automatic" : "Optional notes for this snapshot publish"}
                         rows={3}
+                        disabled={autoPublishDrafts}
+                        className={autoPublishDrafts ? "opacity-60" : undefined}
                       />
                     </div>
 
                     <Button
                       onClick={() => publishMutation.mutate()}
-                      disabled={publishMutation.isPending || validationQuery.isLoading || !validation?.valid}
+                      disabled={autoPublishDrafts || publishMutation.isPending || validationQuery.isLoading || !validation?.valid}
+                      variant={autoPublishDrafts ? "secondary" : "default"}
                     >
-                      {publishMutation.isPending ? "Publishing..." : "Publish Snapshot"}
+                      {autoPublishDrafts ? "Auto-Publish Enabled" : publishMutation.isPending ? "Publishing..." : "Publish Snapshot"}
                     </Button>
                   </div>
 

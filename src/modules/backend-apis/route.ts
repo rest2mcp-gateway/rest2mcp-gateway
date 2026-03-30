@@ -36,4 +36,13 @@ export const backendApiRoutes: FastifyPluginAsync = async (app) => {
     const row = await backendApiService.update(app, request.user.sub, request.user.organizationId, params.id, body);
     return ok(serializeBackendApi(row));
   });
+
+  app.delete("/:id", {
+    schema: { tags: ["backend-apis"], params: paramsSchema },
+    preHandler: requireRoles(["super_admin", "admin", "editor"])
+  }, async (request) => {
+    const params = paramsSchema.parse(request.params);
+    const row = await backendApiService.delete(app, request.user.sub, request.user.organizationId, params.id);
+    return ok(serializeBackendApi(row));
+  });
 };

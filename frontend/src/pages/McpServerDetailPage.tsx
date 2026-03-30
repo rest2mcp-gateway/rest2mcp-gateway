@@ -1,9 +1,20 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, Plus } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { getMcpRuntimeUrl, mcpServersApi, organizationsApi, toolsApi } from "@/services/api-client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -90,6 +101,34 @@ export default function McpServerDetailPage() {
     }
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => mcpServersApi.delete(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["mcp-servers"] });
+      queryClient.invalidateQueries({ queryKey: ["tools"] });
+      queryClient.invalidateQueries({ queryKey: ["tool-mappings"] });
+      toast.success("MCP server deleted");
+      navigate("/mcp-servers");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to delete MCP server");
+    }
+  });
+
+  const deleteToolMutation = useMutation({
+    mutationFn: (toolId: string) => toolsApi.delete(toolId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tools"] });
+      queryClient.invalidateQueries({ queryKey: ["tools", "server-page", id] });
+      queryClient.invalidateQueries({ queryKey: ["tools", "server-all", id] });
+      queryClient.invalidateQueries({ queryKey: ["tool-mappings"] });
+      toast.success("Tool deleted");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to delete tool");
+    }
+  });
+
   const updateField = <K extends keyof McpServerFormData>(key: K, value: McpServerFormData[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -126,6 +165,29 @@ export default function McpServerDetailPage() {
         description={isNew ? "Define a new MCP server exposed to clients" : "Edit MCP server configuration"}
         actions={
           <>
+            {!isNew ? (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" disabled={deleteMutation.isPending}>
+                    <Trash2 className="w-4 h-4 mr-1" /> Delete MCP
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete MCP server?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This removes the server and all tools under it, including their mappings.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => deleteMutation.mutate()}>
+                      {deleteMutation.isPending ? "Deleting..." : "Delete MCP"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            ) : null}
             {!isNew ? (
               <Button variant="outline" onClick={() => navigate(`/backend-apis/import?targetMcpServerId=${id}`)}>
                 Import OpenAPI
@@ -268,6 +330,27 @@ export default function McpServerDetailPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-mono text-muted-foreground">{tool.riskLevel}</span>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm" disabled={deleteToolMutation.isPending}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete tool?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This removes the tool and its mapping from the MCP server.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => deleteToolMutation.mutate(tool.id)}>
+                                {deleteToolMutation.isPending ? "Deleting..." : "Delete Tool"}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                         <Button variant="ghost" size="sm" onClick={() => navigate(`/mcp-servers/${id}/tools/${tool.id}/test`)}>Test</Button>
                         <Button variant="ghost" size="sm" onClick={() => navigate(`/mcp-servers/${id}/tools/${tool.id}`)}>Edit</Button>
                       </div>

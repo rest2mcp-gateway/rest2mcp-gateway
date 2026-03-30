@@ -2,10 +2,17 @@ import type { FastifyPluginAsync } from "fastify";
 import { AppError } from "../../lib/errors.js";
 import { ok } from "../../lib/response.js";
 import { requireAuth } from "../../lib/auth.js";
-import { authUserSchema, loginBodySchema } from "./schemas.js";
+import { env } from "../../config/env.js";
+import { authUserSchema, envConfigSchema, loginBodySchema } from "./schemas.js";
 import { authRepository } from "./repository.js";
 import { authService } from "./service.js";
 import { serializeAuthUser } from "./serializer.js";
+
+const envConfig = () =>
+  envConfigSchema.parse({
+    autoPublishDrafts: env.NODE_ENV === "development",
+    mode: env.NODE_ENV
+  });
 
 export const authRoutes: FastifyPluginAsync = async (app) => {
   app.post("/login", {
@@ -18,7 +25,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const result = await authService.login(app, username, password);
     return ok({
       token: result.token,
-      user: authUserSchema.parse(serializeAuthUser(result.user))
+      user: authUserSchema.parse(serializeAuthUser(result.user)),
+      env_config: envConfig()
     });
   });
 
@@ -34,7 +42,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     }
 
     return ok({
-      user: authUserSchema.parse(serializeAuthUser(user))
+      user: authUserSchema.parse(serializeAuthUser(user)),
+      env_config: envConfig()
     });
   });
 };

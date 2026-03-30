@@ -19,7 +19,10 @@ export const buildCatalogRepository = <TTable extends Record<string, any>>(
 export const buildCatalogService = (
   entityType: string,
   repository: ReturnType<typeof buildCatalogRepository>,
-  options?: { autoPublish?: boolean }
+  options?: {
+    autoPublish?: boolean;
+    beforeDelete?: (app: FastifyInstance, organizationId: string, id: string) => Promise<void>;
+  }
 ) => ({
   list: repository.list,
   async create(app: FastifyInstance, actorId: string, organizationId: string, values: any) {
@@ -59,6 +62,29 @@ export const buildCatalogService = (
     });
     if (options?.autoPublish) {
       await maybeAutoPublishDraft(app, actorId, organizationId, `${entityType}.update`);
+    }
+    return row;
+  },
+  async delete(app: FastifyInstance, actorId: string, organizationId: string, id: string) {
+    if (options?.beforeDelete) {
+      await options.beforeDelete(app, organizationId, id);
+    }
+    const deletedRows = await repository.delete(app, id) as Array<Record<string, unknown>>;
+    const row = deletedRows[0];
+    if (!row) {
+      throw new AppError(404, `${entityType} not found`, `${entityType}_not_found`);
+    }
+    await writeAuditEvent(app, {
+      organizationId,
+      actorType: "user",
+      actorId,
+      action: `${entityType}.delete`,
+      entityType,
+      entityId: String(row.id),
+      payload: {}
+    });
+    if (options?.autoPublish) {
+      await maybeAutoPublishDraft(app, actorId, organizationId, `${entityType}.delete`);
     }
     return row;
   }

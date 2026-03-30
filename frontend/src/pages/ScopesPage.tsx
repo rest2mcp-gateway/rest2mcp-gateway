@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { scopesApi } from "@/services/api-client";
-import { Shield, Plus, Search, AlertTriangle } from "lucide-react";
+import { Shield, Plus, Search, AlertTriangle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,6 +11,17 @@ import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import type { ScopeFormData } from "@/types/api";
@@ -47,6 +58,16 @@ export default function ScopesPage() {
       setEditId(null);
     },
     onError: (err) => { toast.error(err instanceof Error ? err.message : "Failed to save scope"); }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => scopesApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["scopes"] });
+      queryClient.invalidateQueries({ queryKey: ["tools"] });
+      toast.success("Scope deleted");
+    },
+    onError: (err) => { toast.error(err instanceof Error ? err.message : "Failed to delete scope"); }
   });
 
   const openEdit = (scope: typeof scopes[0]) => {
@@ -112,6 +133,27 @@ export default function ScopesPage() {
                       <div className="flex items-center gap-1">
                         <span className="text-xs text-muted-foreground mr-2">{scope.description || "No description"}</span>
                         <Button variant="ghost" size="sm" onClick={() => openEdit(scope)}>Edit</Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm" disabled={deleteMutation.isPending}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete scope?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This removes the scope and clears it from any tools currently using it.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => deleteMutation.mutate(scope.id)}>
+                                {deleteMutation.isPending ? "Deleting..." : "Delete Scope"}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </CardContent>
                   </Card>

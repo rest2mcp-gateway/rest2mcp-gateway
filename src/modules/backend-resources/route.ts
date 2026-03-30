@@ -36,4 +36,13 @@ export const backendResourceRoutes: FastifyPluginAsync = async (app) => {
     const row = await backendResourceService.update(app, request.user.sub, request.user.organizationId, params.id, body);
     return ok(serializeBackendResource(row));
   });
+
+  app.delete("/:id", {
+    schema: { tags: ["backend-resources"], params: paramsSchema },
+    preHandler: requireRoles(["super_admin", "admin", "editor"])
+  }, async (request) => {
+    const params = paramsSchema.parse(request.params);
+    const row = await backendResourceService.delete(app, request.user.sub, request.user.organizationId, params.id);
+    return ok(serializeBackendResource(row));
+  });
 };

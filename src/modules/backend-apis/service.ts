@@ -1,7 +1,9 @@
+import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { AppError } from "../../lib/errors.js";
 import { encryptSecret } from "../../lib/crypto.js";
 import { writeAuditEvent } from "../../lib/audit.js";
+import { mcpServers, toolMappings, tools } from "../../db/schema.js";
 import { maybeAutoPublishDraft } from "../config/auto-publish.js";
 import { backendApiRepository } from "./repository.js";
 
@@ -118,6 +120,31 @@ const buildAuthConfig = (input: BackendApiInput, existing?: { authType: string; 
 const stripUndefined = <T extends Record<string, unknown>>(value: T) =>
   Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined));
 
+const listApiDependencies = async (app: FastifyInstance, backendApiId: string) =>
+  app.db
+    .select({
+      toolId: tools.id,
+      toolName: tools.name,
+      serverId: mcpServers.id,
+      serverName: mcpServers.name
+    })
+    .from(toolMappings)
+    .innerJoin(tools, eq(toolMappings.toolId, tools.id))
+    .innerJoin(mcpServers, eq(tools.mcpServerId, mcpServers.id))
+    .where(eq(toolMappings.backendApiId, backendApiId));
+
+const buildDependencyMessage = (
+  entityLabel: string,
+  references: Array<{ toolName: string; serverName: string }>
+) => {
+  const preview = references
+    .slice(0, 3)
+    .map((reference) => `${reference.toolName} (${reference.serverName})`)
+    .join(", ");
+  const suffix = references.length > 3 ? `, and ${references.length - 3} more` : "";
+  return `Cannot delete ${entityLabel} because it is referenced by ${references.length} tool mapping${references.length === 1 ? "" : "s"}: ${preview}${suffix}.`;
+};
+
 const buildPersistedValues = (
   input: BackendApiInput,
   existing?: { authType: string; authConfig: unknown }
@@ -182,6 +209,40 @@ export const backendApiService = {
     });
 
     await maybeAutoPublishDraft(app, actorId, organizationId, "backend_api.update");
+    return row;
+  },
+  async delete(app: FastifyInstance, actorId: string, organizationId: string, id: string) {
+    const existing = await backendApiRepository.getById(app, organizationId, id);
+    if (!existing) {
+      throw new AppError(404, "backend_api not found", "backend_api_not_found");
+    }
+
+    const references = await listApiDependencies(app, id);
+    if (references.length > 0) {
+      throw new AppError(409, buildDependencyMessage("backend API", references), "backend_api_in_use", {
+        references
+      });
+    }
+
+    await app.db.delete(toolMappings).where(eq(toolMappings.backendApiId, id));
+
+    const deletedRows = await backendApiRepository.delete(app, id) as Array<{ id: string } & Record<string, unknown>>;
+    const row = deletedRows[0];
+    if (!row) {
+      throw new AppError(404, "backend_api not found", "backend_api_not_found");
+    }
+
+    await writeAuditEvent(app, {
+      organizationId,
+      actorType: "user",
+      actorId,
+      action: "backend_api.delete",
+      entityType: "backend_api",
+      entityId: row.id,
+      payload: { name: existing.name, slug: existing.slug }
+    });
+
+    await maybeAutoPublishDraft(app, actorId, organizationId, "backend_api.delete");
     return row;
   }
 };

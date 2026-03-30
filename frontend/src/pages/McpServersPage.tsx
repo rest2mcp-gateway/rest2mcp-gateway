@@ -1,6 +1,6 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { mcpServersApi, toolsApi } from "@/services/api-client";
-import { AlertTriangle, Server, Zap, Plus } from "lucide-react";
+import { AlertTriangle, Server, Zap, Plus, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader, StatusBadge, EmptyState, ErrorState, LoadingState, PaginationControls } from "@/components/shared";
@@ -9,9 +9,21 @@ import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from "@/components/ui/alert-dialog";
 
 export default function McpServersPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
@@ -37,6 +49,24 @@ export default function McpServersPage() {
   const anyError = serversQuery.isError;
   const firstError = serversQuery.error;
   const anyLoading = serversQuery.isLoading;
+
+  const deleteServerMutation = useMutation({
+    mutationFn: (id: string) => mcpServersApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["mcp-servers"] });
+      queryClient.invalidateQueries({ queryKey: ["tools"] });
+      queryClient.invalidateQueries({ queryKey: ["tool-mappings"] });
+    }
+  });
+
+  const deleteToolMutation = useMutation({
+    mutationFn: (id: string) => toolsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tools"] });
+      queryClient.invalidateQueries({ queryKey: ["mcp-servers"] });
+      queryClient.invalidateQueries({ queryKey: ["tool-mappings"] });
+    }
+  });
 
   const getTools = (serverId: string) => {
     const index = servers.findIndex((server) => server.id === serverId);
@@ -88,7 +118,30 @@ export default function McpServersPage() {
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">{server.description || "No description"}</p>
                   </div>
-                  <Badge variant="secondary">{getTools(server.id).length} tools</Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">{getTools(server.id).length} tools</Badge>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="sm" disabled={deleteServerMutation.isPending}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete MCP server?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This removes the server and all tools under it, including their mappings.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => deleteServerMutation.mutate(server.id)}>
+                            {deleteServerMutation.isPending ? "Deleting..." : "Delete MCP"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
                 {getToolsQuery(server.id)?.isError ? (
                   <div className="mb-3 flex items-start justify-between gap-4 rounded-md border border-warning/30 bg-warning/5 p-3 text-sm">
@@ -114,6 +167,27 @@ export default function McpServersPage() {
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-xs">{tool.riskLevel}</Badge>
                           <StatusBadge active={tool.isActive} />
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" disabled={deleteToolMutation.isPending}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete tool?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This removes the tool and its mapping from the MCP server.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => deleteToolMutation.mutate(tool.id)}>
+                                  {deleteToolMutation.isPending ? "Deleting..." : "Delete Tool"}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
                     ))}

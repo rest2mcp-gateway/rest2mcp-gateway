@@ -329,5 +329,35 @@ export const toolService = {
     await maybeAutoPublishDraft(app, actorId, organizationId, "tool.update");
 
     return this.get(app, organizationId, existing.id);
+  },
+
+  async delete(app: FastifyInstance, actorId: string, organizationId: string, toolId: string) {
+    const existing = await getToolForOrganization(app, organizationId, toolId);
+
+    await app.db.delete(toolScopes).where(eq(toolScopes.toolId, existing.id));
+    await app.db.delete(toolMappings).where(eq(toolMappings.toolId, existing.id));
+
+    const [row] = await app.db.delete(tools).where(eq(tools.id, existing.id)).returning();
+    if (!row) {
+      throw new AppError(404, "Tool not found", "tool_not_found");
+    }
+
+    await writeAuditEvent(app, {
+      organizationId,
+      actorType: "user",
+      actorId,
+      action: "tool.delete",
+      entityType: "tool",
+      entityId: existing.id,
+      payload: {
+        mcpServerId: existing.mcpServerId,
+        name: existing.name,
+        slug: existing.slug
+      }
+    });
+
+    await maybeAutoPublishDraft(app, actorId, organizationId, "tool.delete");
+
+    return row;
   }
 };

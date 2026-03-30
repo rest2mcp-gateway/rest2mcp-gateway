@@ -1,9 +1,20 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { resourcesApi } from "@/services/api-client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -109,6 +120,20 @@ export default function BackendResourceDetailPage() {
     }
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => resourcesApi.delete(resourceId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["resources", apiId] });
+      queryClient.invalidateQueries({ queryKey: ["tools"] });
+      queryClient.invalidateQueries({ queryKey: ["tool-mappings"] });
+      toast.success("Resource deleted");
+      navigate(`/backend-apis/${apiId}`);
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Failed to delete resource");
+    }
+  });
+
   if (!isNew && resourceQuery.isError) {
     return (
       <div className="p-6 max-w-4xl animate-fade-in">
@@ -140,7 +165,34 @@ export default function BackendResourceDetailPage() {
       <PageHeader
         title={isNew ? "New Resource" : form.name}
         description={isNew ? "Create a backend resource under this API" : "Edit backend resource definition"}
-        actions={<Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>{saveMutation.isPending ? "Saving..." : "Save"}</Button>}
+        actions={
+          <div className="flex items-center gap-2">
+            {!isNew ? (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" disabled={deleteMutation.isPending}>
+                    <Trash2 className="w-4 h-4 mr-1" /> Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete resource?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This removes the backend resource and any tool mappings pointing to it.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => deleteMutation.mutate()}>
+                      {deleteMutation.isPending ? "Deleting..." : "Delete Resource"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            ) : null}
+            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>{saveMutation.isPending ? "Saving..." : "Save"}</Button>
+          </div>
+        }
       />
 
       <Card>

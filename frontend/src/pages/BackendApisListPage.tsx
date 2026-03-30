@@ -1,16 +1,28 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { backendApisApi } from "@/services/api-client";
 import { Link, useNavigate } from "react-router-dom";
-import { Database, Plus, Search, ExternalLink } from "lucide-react";
+import { Database, Plus, Search, ExternalLink, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from "@/components/ui/alert-dialog";
 import { PageHeader, StatusBadge, EmptyState, ErrorState, LoadingState, PaginationControls } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
 
 export default function BackendApisListPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
@@ -25,6 +37,15 @@ export default function BackendApisListPage() {
 
   const apis = data?.items ?? [];
   const pagination = data?.pagination;
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => backendApisApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["backend-apis"] });
+      queryClient.invalidateQueries({ queryKey: ["tools"] });
+      queryClient.invalidateQueries({ queryKey: ["tool-mappings"] });
+    }
+  });
 
   return (
     <div className="p-6 max-w-6xl animate-fade-in">
@@ -81,6 +102,27 @@ export default function BackendApisListPage() {
                   </div>
                   <div className="flex items-center gap-2 ml-4">
                     <Button variant="ghost" size="sm" onClick={() => navigate(`/backend-apis/${api.id}`)}>Edit</Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="sm" disabled={deleteMutation.isPending}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete backend API?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This removes the API, all of its resources, and any tool mappings pointing to them.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => deleteMutation.mutate(api.id)}>
+                            {deleteMutation.isPending ? "Deleting..." : "Delete API"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
               </CardContent>

@@ -73,5 +73,14 @@ export const backendResourceRepository = {
       .returning();
 
     return row ?? null;
+  },
+
+  async delete(app: FastifyInstance, resourceId: string) {
+    const [row] = await app.db
+      .delete(backendResources)
+      .where(eq(backendResources.id, resourceId))
+      .returning();
+
+    return row ?? null;
   }
 };

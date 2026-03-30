@@ -14,3 +14,8 @@ export const authUserSchema = z.object({
   authMode: z.enum(["local", "oidc"]),
   isActive: z.boolean()
 });
+
+export const envConfigSchema = z.object({
+  autoPublishDrafts: z.boolean(),
+  mode: z.enum(["development", "test", "production"])
+});
