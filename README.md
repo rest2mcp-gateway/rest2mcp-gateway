@@ -6,6 +6,8 @@ It is designed as a no-code gateway for publishing MCP-compatible capabilities o
 
 The goal is simple: shorten the path from an existing REST API to a usable MCP server that agents and clients can consume.
 
+Today, Rest2MC Gateway targets the HTTP-based MCP server model, exposing runtime servers over the [MCP transport specification](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports) using Streamable HTTP. For protected servers, it also supports the [MCP authorization model](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization), including OAuth 2.0 [Protected Resource Metadata](https://datatracker.ietf.org/doc/html/rfc9728) discovery and bearer-token validation against an external authorization server described by [OAuth 2.0 Authorization Server Metadata](https://datatracker.ietf.org/doc/html/rfc8414). In practice, that means this gateway focuses on HTTP runtime interoperability and OAuth-based access control rather than stdio transport or acting as an OAuth authorization server itself.
+
 With Rest2MC Gateway, you can:
 
 - connect existing backend APIs to MCP-facing tools
