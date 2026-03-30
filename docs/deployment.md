@@ -35,31 +35,13 @@ Start the server:
 npm start
 ```
 
-## Docker
-
-Build the image:
-
-```bash
-docker build -t rest2mc-gateway .
-```
-
-Run the image:
-
-```bash
-docker run --rm -p 3000:3000 \
-  -e JWT_SECRET=replace-me \
-  -e SECRET_ENCRYPTION_KEY=replace-me-too \
-  -e BOOTSTRAP_ADMIN_PASSWORD=change-this-password \
-  -v rest-to-mcp-data:/app/data \
-  rest2mc-gateway
-```
-
 ## Deployment notes
 
-- the container includes the admin UI, admin API, and runtime endpoints
-- the default container data path is `/app/data/db`
-- a Docker volume is recommended if you use local file-backed storage in the container
-- the image runs in production mode, so required secrets must be provided explicitly
+- the supported deployment path is a direct Node.js process
+- the server includes the admin UI, admin API, and runtime endpoints
+- if you use local file-backed storage, make sure `PGLITE_DATA_DIR` points to persistent storage
+- if you use PostgreSQL, set `DATABASE_PROVIDER=postgres` and provide `DATABASE_URL`
+- the application runs in production mode when started with production configuration, so required secrets must be provided explicitly
 
 ## Recommended next step
 

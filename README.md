@@ -54,6 +54,11 @@ cp .env.example .env
 
 For a first local run, the defaults are usually enough.
 
+Prerequisites:
+
+- Node.js 22+
+- npm 10+
+
 Notes:
 
 - The default setup uses local file-backed storage so you can get running quickly.
@@ -116,6 +121,8 @@ Those local-only generated values are meant to speed up first startup. For produ
 
 ## Production-style deployment
 
+The currently supported deployment path is a direct Node.js process.
+
 For a more persistent deployment:
 
 1. Set real secret values in `.env`.
@@ -130,31 +137,13 @@ npm run build
 npm start
 ```
 
-## Docker
+Deployment notes:
 
-Build the image:
-
-```bash
-docker build -t rest2mc-gateway .
-```
-
-Run it:
-
-```bash
-docker run --rm -p 3000:3000 \
-  -e JWT_SECRET=replace-me \
-  -e SECRET_ENCRYPTION_KEY=replace-me-too \
-  -e BOOTSTRAP_ADMIN_PASSWORD=change-this-password \
-  -v rest-to-mcp-data:/app/data \
-  rest2mc-gateway
-```
-
-Notes:
-
-- The image includes the full product in a single container.
-- The default container database path is `/app/data/db`.
-- A Docker volume is recommended so PGlite data and generated local state survive container restarts.
-- The image sets `NODE_ENV=production`, so `JWT_SECRET`, `SECRET_ENCRYPTION_KEY`, and `BOOTSTRAP_ADMIN_PASSWORD` must be provided when `AUTH_MODE=local`.
+- the application serves the admin UI, admin API, and runtime endpoints from the same server process
+- if you use `DATABASE_PROVIDER=pglite`, make sure `PGLITE_DATA_DIR` points to persistent storage
+- if you use `DATABASE_PROVIDER=postgres`, set a production `DATABASE_URL`
+- in production with `AUTH_MODE=local`, `JWT_SECRET`, `SECRET_ENCRYPTION_KEY`, and `BOOTSTRAP_ADMIN_PASSWORD` must be set explicitly
+- container packaging may be added later, but it is not the primary supported distribution path today
 
 ## Useful commands
 
