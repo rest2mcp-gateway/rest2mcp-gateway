@@ -4,6 +4,7 @@ import { z } from "zod";
 import { runtimeService } from "./service.js";
 import {
   buildProtectedResourceMetadata,
+  ensureTokenHasScopes,
   validateRuntimeAccessToken
 } from "./auth.js";
 
@@ -29,12 +30,13 @@ export const runtimeRoutes: FastifyPluginAsync = async (app) => {
       };
     }
 
-    return buildProtectedResourceMetadata(
+      return buildProtectedResourceMetadata(
       request,
       params.organizationSlug,
       params.serverSlug,
       runtimeServer.authServerConfig,
-      runtimeServer.server.title
+      runtimeServer.server.title,
+      runtimeServer.requiredScopes
     );
   });
 
@@ -63,6 +65,30 @@ export const runtimeRoutes: FastifyPluginAsync = async (app) => {
 
         if (authPayload) {
           (request.raw as typeof request.raw & { auth?: unknown }).auth = authPayload;
+        }
+
+        const runtimeRequest =
+          request.body && typeof request.body === "object" && !Array.isArray(request.body)
+            ? request.body as Record<string, unknown>
+            : null;
+        if (authPayload && runtimeRequest?.method === "tools/call") {
+          const paramsObject =
+            runtimeRequest.params && typeof runtimeRequest.params === "object" && !Array.isArray(runtimeRequest.params)
+              ? runtimeRequest.params as Record<string, unknown>
+              : {};
+          const toolName = typeof paramsObject.name === "string" ? paramsObject.name : null;
+          if (toolName) {
+            const runtimeTool = runtimeServer.toolsByName.get(toolName);
+            if (runtimeTool) {
+              ensureTokenHasScopes(
+                authPayload,
+                runtimeTool.requiredScopes,
+                request,
+                params.organizationSlug,
+                params.serverSlug
+              );
+            }
+          }
         }
 
         const transport = new StreamableHTTPServerTransport({

@@ -44,11 +44,13 @@ export const buildProtectedResourceMetadata = (
   organizationSlug: string,
   serverSlug: string,
   authServerConfig: AuthServerConfig,
-  resourceName: string
+  resourceName: string,
+  scopesSupported: string[] = []
 ) => ({
   resource: new URL(`/mcp/${organizationSlug}/${serverSlug}`, `${request.protocol}://${request.headers.host}`).href,
   authorization_servers: [authServerConfig.issuer],
-  resource_name: resourceName
+  resource_name: resourceName,
+  scopes_supported: scopesSupported
 });
 
 export const buildUnauthorizedChallenge = (
@@ -56,6 +58,49 @@ export const buildUnauthorizedChallenge = (
   organizationSlug: string,
   serverSlug: string
 ) => `Bearer resource_metadata="${getProtectedResourceMetadataUrl(request, organizationSlug, serverSlug)}"`;
+
+const parseTokenScopes = (value: unknown) => {
+  if (typeof value === "string") {
+    return value.split(/\s+/).map((scope) => scope.trim()).filter(Boolean);
+  }
+
+  if (Array.isArray(value)) {
+    return value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
+  }
+
+  return [];
+};
+
+export const ensureTokenHasScopes = (
+  tokenPayload: unknown,
+  requiredScopes: string[],
+  request: FastifyRequest,
+  organizationSlug: string,
+  serverSlug: string
+) => {
+  const normalizedRequiredScopes = Array.from(new Set(requiredScopes.filter((scope) => scope.trim().length > 0)));
+  if (normalizedRequiredScopes.length === 0) {
+    return;
+  }
+
+  const payload =
+    tokenPayload && typeof tokenPayload === "object" && !Array.isArray(tokenPayload)
+      ? tokenPayload as Record<string, unknown>
+      : {};
+  const grantedScopes = new Set([
+    ...parseTokenScopes(payload.scope),
+    ...parseTokenScopes(payload.scp)
+  ]);
+
+  const missingScopes = normalizedRequiredScopes.filter((scope) => !grantedScopes.has(scope));
+  if (missingScopes.length === 0) {
+    return;
+  }
+
+  throw new AppError(403, `Missing required scopes: ${missingScopes.join(", ")}`, "runtime_auth_insufficient_scope", {
+    wwwAuthenticate: `${buildUnauthorizedChallenge(request, organizationSlug, serverSlug)}, error="insufficient_scope", scope="${normalizedRequiredScopes.join(" ")}"`
+  });
+};
 
 export const validateRuntimeAccessToken = async (
   request: FastifyRequest,

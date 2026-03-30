@@ -13,7 +13,11 @@
     "dev:frontend": "npm run build:watch --workspace frontend",
     "start": "node dist/server.js",
     "build": "npm run build --workspace frontend && tsc -p tsconfig.build.json",
-    "test": "node --test --import tsx",
+    "test": "run-s test:backend test:frontend",
+    "test:backend": "run-s test:backend:unit test:backend:integration",
+    "test:backend:unit": "node --test --import tsx tests/config.service.test.ts tests/secret.serializer.test.ts",
+    "test:backend:integration": "node --test --import tsx tests/integration/runtime.workflows.test.ts",
+    "test:frontend": "npm run test --workspace frontend",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push"
   },

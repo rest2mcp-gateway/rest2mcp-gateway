@@ -4,6 +4,8 @@ import { once } from "node:events";
 type StubRequest = {
   method: string;
   path: string;
+  pathname: string;
+  query: Record<string, string>;
   headers: IncomingMessage["headers"];
   bodyText: string;
   bodyJson: unknown;
@@ -16,6 +18,12 @@ type StubResponse = {
 };
 
 type StubHandler = (request: StubRequest) => StubResponse | Promise<StubResponse>;
+
+type ApiKeyProtection = {
+  in?: "header" | "query";
+  name: string;
+  value: string;
+};
 
 const routeKey = (method: string, path: string) => `${method.toUpperCase()} ${path}`;
 
@@ -41,17 +49,22 @@ export const createStubBackend = async () => {
     await once(req, "end");
 
     const path = req.url ?? "/";
+    const parsedUrl = new URL(path, "http://127.0.0.1");
     const bodyText = Buffer.concat(chunks).toString("utf8");
     const recordedRequest: StubRequest = {
       method: (req.method ?? "GET").toUpperCase(),
       path,
+      pathname: parsedUrl.pathname,
+      query: Object.fromEntries(parsedUrl.searchParams.entries()),
       headers: req.headers,
       bodyText,
       bodyJson: parseBodyJson(bodyText)
     };
     requests.push(recordedRequest);
 
-    const handler = handlers.get(routeKey(recordedRequest.method, path));
+    const handler =
+      handlers.get(routeKey(recordedRequest.method, recordedRequest.pathname)) ??
+      handlers.get(routeKey(recordedRequest.method, path));
     if (!handler) {
       res.statusCode = 404;
       res.setHeader("content-type", "application/json");
@@ -88,6 +101,32 @@ export const createStubBackend = async () => {
     requests,
     on(method: string, path: string, handler: StubHandler) {
       handlers.set(routeKey(method, path), handler);
+    },
+    onApiKeyProtected(
+      method: string,
+      path: string,
+      protection: ApiKeyProtection,
+      handler: StubHandler
+    ) {
+      handlers.set(routeKey(method, path), async (request) => {
+        const placement = protection.in ?? "header";
+        const actualValue =
+          placement === "query"
+            ? request.query[protection.name]
+            : request.headers[protection.name.toLowerCase()];
+        const normalizedActual = Array.isArray(actualValue) ? actualValue[0] : actualValue;
+
+        if (normalizedActual !== protection.value) {
+          return {
+            status: 401,
+            body: {
+              error: "invalid_api_key"
+            }
+          };
+        }
+
+        return handler(request);
+      });
     },
     close: async () => {
       await new Promise<void>((resolve, reject) => {

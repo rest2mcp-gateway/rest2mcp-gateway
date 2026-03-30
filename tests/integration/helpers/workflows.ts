@@ -12,7 +12,31 @@ type RuntimeFixture = {
   backendResourceId: string;
   mcpServerId: string;
   toolId: string;
+  scopeIds: string[];
 };
+
+type BackendApiAuthOptions =
+  | {
+      authType?: "none";
+    }
+  | {
+      authType: "api_key";
+      apiKeyLocation: "header" | "query";
+      apiKeyName: string;
+      apiKeyValue: string;
+    };
+
+type McpServerOptions =
+  | {
+      accessMode?: "public";
+      audience?: undefined;
+      scopeNames?: string[];
+    }
+  | {
+      accessMode: "protected";
+      audience: string;
+      scopeNames?: string[];
+    };
 
 const TEST_ADMIN = {
   email: "admin@test.local",
@@ -103,8 +127,28 @@ export const loginAsBootstrapAdmin = async (app: FastifyInstance): Promise<Admin
 export const createRuntimeFixture = async (
   app: FastifyInstance,
   session: AdminSession,
-  backendBaseUrl: string
+  backendBaseUrl: string,
+  authOptions: BackendApiAuthOptions = { authType: "none" },
+  mcpOptions: McpServerOptions = { accessMode: "public", scopeNames: [] }
 ): Promise<RuntimeFixture> => {
+  const scopeIds: string[] = [];
+  for (const scopeName of mcpOptions.scopeNames ?? []) {
+    const scope = await request(app, {
+      method: "POST",
+      url: "/api/admin/v1/scopes",
+      token: session.token,
+      payload: {
+        organizationId: session.organizationId,
+        name: scopeName,
+        description: `Scope ${scopeName}`,
+        category: "runtime",
+        isSensitive: false
+      }
+    });
+    assert.equal(scope.response.statusCode, 200, scope.response.body);
+    scopeIds.push(scope.body.data.id);
+  }
+
   const backendApi = await request(app, {
     method: "POST",
     url: "/api/admin/v1/backend-apis",
@@ -114,7 +158,14 @@ export const createRuntimeFixture = async (
       name: "Stub Backend",
       slug: "stub-backend",
       defaultBaseUrl: backendBaseUrl,
-      authType: "none",
+      authType: authOptions.authType ?? "none",
+      ...(authOptions.authType === "api_key"
+        ? {
+            apiKeyLocation: authOptions.apiKeyLocation,
+            apiKeyName: authOptions.apiKeyName,
+            apiKeyValue: authOptions.apiKeyValue
+          }
+        : {}),
       defaultTimeoutMs: 5_000,
       retryPolicy: { retries: 0 },
       isActive: true
@@ -152,7 +203,10 @@ export const createRuntimeFixture = async (
       version: "1.0.0",
       title: "Public Runtime Server",
       authMode: "local",
-      accessMode: "public",
+      accessMode: mcpOptions.accessMode ?? "public",
+      ...(mcpOptions.accessMode === "protected"
+        ? { audience: mcpOptions.audience }
+        : {}),
       isActive: true
     }
   });
@@ -187,7 +241,7 @@ export const createRuntimeFixture = async (
       examples: [],
       riskLevel: "low",
       isActive: true,
-      scopeIds: [],
+      scopeIds,
       mapping: {
         backendResourceId: backendResource.body.data.id,
         requestMapping: {},
@@ -206,7 +260,8 @@ export const createRuntimeFixture = async (
     backendApiId: backendApi.body.data.id,
     backendResourceId: backendResource.body.data.id,
     mcpServerId: mcpServer.body.data.id,
-    toolId: tool.body.data.id
+    toolId: tool.body.data.id,
+    scopeIds
   };
 };
 
@@ -254,19 +309,53 @@ export const callRuntime = async (
   app: FastifyInstance,
   session: AdminSession,
   body: Record<string, unknown>,
-  serverSlug = "public-runtime-server"
+  serverSlug = "public-runtime-server",
+  token?: string
 ) => {
   const result = await request(app, {
     method: "POST",
     url: `/mcp/${session.organizationSlug}/${serverSlug}`,
     payload: body,
     headers: {
-      accept: "application/json, text/event-stream"
+      accept: "application/json, text/event-stream",
+      ...(token
+        ? {
+            authorization: `Bearer ${token}`
+          }
+        : {})
     }
   });
   assert.equal(result.response.statusCode, 200, result.response.body);
   return result.body;
 };
+
+export const callRuntimeRaw = async (
+  app: FastifyInstance,
+  session: AdminSession,
+  {
+    method = "POST",
+    body,
+    serverSlug = "public-runtime-server",
+    token
+  }: {
+    method?: "GET" | "POST";
+    body?: Record<string, unknown>;
+    serverSlug?: string;
+    token?: string;
+  }
+) => request(app, {
+  method,
+  url: `/mcp/${session.organizationSlug}/${serverSlug}`,
+  payload: body,
+  headers: {
+    accept: method === "POST" ? "application/json, text/event-stream" : "text/event-stream",
+    ...(token
+      ? {
+          authorization: `Bearer ${token}`
+        }
+      : {})
+  }
+});
 
 export const updateToolDescription = async (
   app: FastifyInstance,
@@ -281,6 +370,25 @@ export const updateToolDescription = async (
     payload: {
       description
     }
+  });
+  assert.equal(result.response.statusCode, 200, result.response.body);
+  return result.body.data;
+};
+
+export const upsertAuthServerConfig = async (
+  app: FastifyInstance,
+  session: AdminSession,
+  payload: {
+    issuer: string;
+    jwksUri: string;
+    authorizationServerMetadataUrl?: string;
+  }
+) => {
+  const result = await request(app, {
+    method: "PUT",
+    url: "/api/admin/v1/security/auth-server",
+    token: session.token,
+    payload
   });
   assert.equal(result.response.statusCode, 200, result.response.body);
   return result.body.data;

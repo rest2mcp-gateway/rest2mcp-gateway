@@ -88,6 +88,20 @@ type SnapshotToolMapping = {
   isActive: boolean;
 };
 
+type SnapshotScope = {
+  id: string;
+  organizationId: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+  isSensitive: boolean;
+};
+
+type SnapshotToolScope = {
+  toolId: string;
+  scopeId: string;
+};
+
 type RuntimeSnapshot = {
   version: number;
   generatedAt: string;
@@ -96,7 +110,9 @@ type RuntimeSnapshot = {
   backendResources: SnapshotBackendResource[];
   mcpServers: SnapshotMcpServer[];
   tools: SnapshotTool[];
+  scopes: SnapshotScope[];
   toolMappings: SnapshotToolMapping[];
+  toolScopes: SnapshotToolScope[];
 };
 
 type CompiledRuntimeTool = {
@@ -104,6 +120,7 @@ type CompiledRuntimeTool = {
   mapping: SnapshotToolMapping;
   backendApi: SnapshotBackendApi;
   backendResource: SnapshotBackendResource;
+  requiredScopes: string[];
 };
 
 type CompiledRuntimeServer = {
@@ -115,6 +132,7 @@ type CompiledRuntimeServer = {
   server: SnapshotMcpServer;
   toolsByName: Map<string, CompiledRuntimeTool>;
   tools: CompiledRuntimeTool[];
+  requiredScopes: string[];
 };
 
 type RuntimeCacheEntry = {
@@ -339,16 +357,6 @@ const createContentBlocks = (value: unknown) => {
   return [{ type: "text", text: JSON.stringify(value, null, 2) }];
 };
 
-const redactHeadersForLog = (headers: Headers, sensitiveHeaderNames: string[] = []) =>
-  Object.fromEntries(
-    Array.from(headers.entries()).map(([key, value]) => [
-      key,
-      ["authorization", "proxy-authorization", "x-api-key", ...sensitiveHeaderNames.map((name) => name.toLowerCase())].includes(key.toLowerCase())
-        ? "[redacted]"
-        : value
-    ])
-  );
-
 const redactUrlForLog = (url: URL, backendApi: SnapshotBackendApi) => {
   const authConfig = asObject(backendApi.authConfig);
   if (backendApi.authType !== "api_key" || authConfig.in !== "query" || typeof authConfig.name !== "string") {
@@ -371,10 +379,23 @@ const compileSnapshot = (
   const mcpServers = snapshot.mcpServers.filter((row) => row.isActive);
   const tools = snapshot.tools.filter((row) => row.isActive);
   const toolMappings = snapshot.toolMappings.filter((row) => row.isActive);
+  const scopes = snapshot.scopes;
+  const toolScopes = snapshot.toolScopes;
 
   const backendApisById = new Map(backendApis.map((row) => [row.id, row]));
   const backendResourcesById = new Map(backendResources.map((row) => [row.id, row]));
   const mappingsByToolId = new Map(toolMappings.map((row) => [row.toolId, row]));
+  const scopesById = new Map(scopes.map((row) => [row.id, row]));
+  const scopeNamesByToolId = new Map<string, string[]>();
+  for (const row of toolScopes) {
+    const scope = scopesById.get(row.scopeId);
+    if (!scope) {
+      continue;
+    }
+    const current = scopeNamesByToolId.get(row.toolId) ?? [];
+    current.push(scope.name);
+    scopeNamesByToolId.set(row.toolId, current);
+  }
   const toolsByServerId = new Map<string, CompiledRuntimeTool[]>();
 
   for (const tool of tools) {
@@ -389,7 +410,13 @@ const compileSnapshot = (
     }
 
     const current = toolsByServerId.get(tool.mcpServerId) ?? [];
-    current.push({ tool, mapping, backendApi, backendResource });
+    current.push({
+      tool,
+      mapping,
+      backendApi,
+      backendResource,
+      requiredScopes: Array.from(new Set(scopeNamesByToolId.get(tool.id) ?? []))
+    });
     toolsByServerId.set(tool.mcpServerId, current);
   }
 
@@ -404,7 +431,8 @@ const compileSnapshot = (
       authServerConfig: snapshot.authServerConfig,
       server,
       tools: serverTools,
-      toolsByName: new Map(serverTools.map((entry) => [entry.tool.name, entry]))
+      toolsByName: new Map(serverTools.map((entry) => [entry.tool.name, entry])),
+      requiredScopes: Array.from(new Set(serverTools.flatMap((entry) => entry.requiredScopes)))
     });
   }
 
@@ -421,7 +449,9 @@ const parseSnapshotJson = (value: unknown): RuntimeSnapshot => {
     backendResources: Array.isArray(object.backendResources) ? (object.backendResources as SnapshotBackendResource[]) : [],
     mcpServers: Array.isArray(object.mcpServers) ? (object.mcpServers as SnapshotMcpServer[]) : [],
     tools: Array.isArray(object.tools) ? (object.tools as SnapshotTool[]) : [],
-    toolMappings: Array.isArray(object.toolMappings) ? (object.toolMappings as SnapshotToolMapping[]) : []
+    scopes: Array.isArray(object.scopes) ? (object.scopes as SnapshotScope[]) : [],
+    toolMappings: Array.isArray(object.toolMappings) ? (object.toolMappings as SnapshotToolMapping[]) : [],
+    toolScopes: Array.isArray(object.toolScopes) ? (object.toolScopes as SnapshotToolScope[]) : []
   };
 };
 
@@ -491,10 +521,6 @@ const callBackend = async (
   }
 
   applyAuthConfig(url, headers, backendApi);
-  const sensitiveHeaderNames =
-    backendApi.authType === "api_key" && asObject(backendApi.authConfig).in !== "query" && typeof asObject(backendApi.authConfig).name === "string"
-      ? [String(asObject(backendApi.authConfig).name)]
-      : [];
   const loggedUrl = redactUrlForLog(url, backendApi);
 
   const retries = Math.max(
@@ -521,21 +547,7 @@ const callBackend = async (
       }
 
       app.log.info(
-        {
-          organizationId: server.organizationId,
-          mcpServerSlug: server.server.slug,
-          toolName: runtimeTool.tool.name,
-          backendApi: backendApi.name,
-          backendResource: backendResource.operationId,
-          method: requestInit.method,
-          url: loggedUrl,
-          headers: redactHeadersForLog(headers, sensitiveHeaderNames),
-          body: body ? JSON.parse(body) : null,
-          timeoutMs,
-          retries,
-          attempt: currentAttempt
-        },
-        "forwarding MCP tool call to backend"
+        `${requestId} backend request ${requestInit.method} ${loggedUrl} attempt=${currentAttempt}/${retries + 1} timeout=${timeoutMs}ms`
       );
 
       const response = await fetch(url, requestInit);
@@ -545,21 +557,9 @@ const callBackend = async (
       const latencyMs = Date.now() - startedAt;
 
       app.log.info(
-        {
-          organizationId: server.organizationId,
-          mcpServerSlug: server.server.slug,
-          toolName: runtimeTool.tool.name,
-          backendApi: backendApi.name,
-          backendResource: backendResource.operationId,
-          method: requestInit.method,
-          url: loggedUrl,
-          backendStatus: response.status,
-          latencyMs,
-          responseBody: output
-        },
         response.ok
-          ? "backend request completed"
-          : "backend request returned an error response"
+          ? `${requestId} backend response ${response.status} ${requestInit.method} ${loggedUrl} ${latencyMs}ms`
+          : `${requestId} backend response ${response.status} ${requestInit.method} ${loggedUrl} ${latencyMs}ms error`
       );
 
       await runtimeRepository.insertExecutionLog(app, {
@@ -683,7 +683,8 @@ export const runtimeService = {
         inputSchema: asObject(tool.inputSchema),
         outputSchema: asObject(tool.outputSchema),
         annotations: {
-          riskLevel: tool.riskLevel
+          riskLevel: tool.riskLevel,
+          scopes: runtimeServer.toolsByName.get(tool.name)?.requiredScopes ?? []
         }
       }))
     };
