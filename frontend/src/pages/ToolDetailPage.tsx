@@ -19,6 +19,9 @@ import type { BackendApi, BackendResource, RiskLevel, Scope, ToolFormData } from
 
 const prettyJson = (value: unknown) => JSON.stringify(value ?? {}, null, 2);
 const prettyArrayJson = (value: unknown) => JSON.stringify(value ?? [], null, 2);
+const EMPTY_SCOPES: Scope[] = [];
+const EMPTY_APIS: BackendApi[] = [];
+const EMPTY_RESOURCES: BackendResource[] = [];
 
 type SchemaFieldType = "string" | "number" | "integer" | "boolean";
 
@@ -151,8 +154,8 @@ export default function ToolDetailPage() {
   });
 
   const tool = toolQuery.data;
-  const scopes = scopesQuery.data ?? [];
-  const apis = apisQuery.data ?? [];
+  const scopes = scopesQuery.data ?? EMPTY_SCOPES;
+  const apis = apisQuery.data ?? EMPTY_APIS;
 
   const [form, setForm] = useState<ToolFormData>({
     mcpServerId: serverId ?? "",
@@ -218,7 +221,7 @@ export default function ToolDetailPage() {
     enabled: !!selectedBackendApiId
   });
 
-  const resources = resourcesQuery.data ?? [];
+  const resources = resourcesQuery.data ?? EMPTY_RESOURCES;
   const apisById = useMemo(() => new Map(apis.map((api) => [api.id, api])), [apis]);
   const selectedResource = useMemo(
     () => resources.find((resource) => resource.id === form.mapping?.backendResourceId) ?? null,

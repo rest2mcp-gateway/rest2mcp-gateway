@@ -9,6 +9,9 @@ import type { BackendResource } from "@/types/api";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
+const EMPTY_TOOLS = [];
+const EMPTY_APIS = [];
+
 export default function MappingsPage() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
@@ -18,8 +21,8 @@ export default function MappingsPage() {
 
   const mappings = mappingsQuery.data?.items ?? [];
   const pagination = mappingsQuery.data?.pagination;
-  const allTools = toolsQuery.data ?? [];
-  const apis = apisQuery.data ?? [];
+  const allTools = toolsQuery.data ?? EMPTY_TOOLS;
+  const apis = apisQuery.data ?? EMPTY_APIS;
 
   const anyError = mappingsQuery.isError || toolsQuery.isError || apisQuery.isError;
   const firstError = [mappingsQuery, toolsQuery, apisQuery].find((q) => q.isError)?.error;

@@ -15,6 +15,9 @@ import { ErrorState, LoadingState, PageHeader, FieldLabel } from "@/components/s
 import type { BackendApi, BackendResource, Tool, ToolMappingFormData } from "@/types/api";
 
 const prettyJson = (value: unknown) => JSON.stringify(value ?? {}, null, 2);
+const EMPTY_TOOLS: Tool[] = [];
+const EMPTY_APIS: BackendApi[] = [];
+const EMPTY_RESOURCES: BackendResource[] = [];
 
 export default function MappingDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -39,8 +42,8 @@ export default function MappingDetailPage() {
   });
 
   const mapping = mappingQuery.data;
-  const tools = toolsQuery.data ?? [];
-  const apis = apisQuery.data ?? [];
+  const tools = toolsQuery.data ?? EMPTY_TOOLS;
+  const apis = apisQuery.data ?? EMPTY_APIS;
 
   const [form, setForm] = useState<ToolMappingFormData>({
     toolId: "",
@@ -88,7 +91,7 @@ export default function MappingDetailPage() {
     enabled: !!form.backendApiId
   });
 
-  const resources = resourcesQuery.data ?? [];
+  const resources = resourcesQuery.data ?? EMPTY_RESOURCES;
   const toolsById = useMemo(() => new Map(tools.map((tool) => [tool.id, tool])), [tools]);
   const apisById = useMemo(() => new Map(apis.map((api) => [api.id, api])), [apis]);
 
