@@ -1,7 +1,7 @@
 import type {
   BackendApi, BackendEnvironment, BackendResource,
   McpServer, Tool, Scope, ToolScope, ToolMapping
-} from '@/types/api';
+} from '@/contracts/admin-api';
 
 export const mockBackendApis: BackendApi[] = [
   {

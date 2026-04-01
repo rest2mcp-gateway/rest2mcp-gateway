@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader, EmptyState, MethodBadge, StatusBadge, ErrorState, LoadingState, PaginationControls } from "@/components/shared";
 import { useState, useEffect } from "react";
-import type { BackendResource } from "@/types/api";
+import type { BackendResource } from "@/contracts/admin-api";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 

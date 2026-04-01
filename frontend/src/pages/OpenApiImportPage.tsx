@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { ErrorState, FieldLabel, LoadingState, MethodBadge, PageHeader } from "@/components/shared";
-import type { OpenApiImportPreview } from "@/types/api";
+import type { OpenApiImportPreview } from "@/contracts/admin-api";
 
 type OperationSelection = Record<string, boolean>;
 
@@ -136,24 +136,24 @@ export default function OpenApiImportPage() {
           <CardContent className="p-5 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <FieldLabel required>Name</FieldLabel>
-                <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="CoinCap API" />
+                <FieldLabel htmlFor="openapi-import-name" required>Name</FieldLabel>
+                <Input id="openapi-import-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="CoinCap API" />
               </div>
               <div className="space-y-1.5">
-                <FieldLabel required>Slug</FieldLabel>
-                <Input value={slug} onChange={(event) => setSlug(event.target.value)} placeholder="coincap-api" />
+                <FieldLabel htmlFor="openapi-import-slug" required>Slug</FieldLabel>
+                <Input id="openapi-import-slug" value={slug} onChange={(event) => setSlug(event.target.value)} placeholder="coincap-api" />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <FieldLabel>Description</FieldLabel>
-              <Textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={2} placeholder="Imported from OpenAPI" />
+              <FieldLabel htmlFor="openapi-import-description">Description</FieldLabel>
+              <Textarea id="openapi-import-description" value={description} onChange={(event) => setDescription(event.target.value)} rows={2} placeholder="Imported from OpenAPI" />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <FieldLabel required>Base URL</FieldLabel>
-                <Input value={defaultBaseUrl} onChange={(event) => setDefaultBaseUrl(event.target.value)} placeholder="https://api.example.com" className="font-mono text-sm" />
+                <FieldLabel htmlFor="openapi-import-base-url" required>Base URL</FieldLabel>
+                <Input id="openapi-import-base-url" value={defaultBaseUrl} onChange={(event) => setDefaultBaseUrl(event.target.value)} placeholder="https://api.example.com" className="font-mono text-sm" />
               </div>
               <div className="space-y-1.5">
                 <FieldLabel>MCP Server For Exposed Tools</FieldLabel>
@@ -170,8 +170,9 @@ export default function OpenApiImportPage() {
             </div>
 
             <div className="space-y-1.5">
-              <FieldLabel required>OpenAPI Document</FieldLabel>
+              <FieldLabel htmlFor="openapi-import-spec" required>OpenAPI Document</FieldLabel>
               <Textarea
+                id="openapi-import-spec"
                 value={specText}
                 onChange={(event) => setSpecText(event.target.value)}
                 rows={18}

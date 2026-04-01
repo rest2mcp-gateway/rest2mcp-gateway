@@ -137,8 +137,9 @@ export default function McpServerTestPage() {
       {server?.accessMode === "protected" ? (
         <Card className="mb-6">
           <CardContent className="p-5 space-y-2">
-            <FieldLabel required>Bearer Token</FieldLabel>
+            <FieldLabel htmlFor="mcp-server-test-bearer-token" required>Bearer Token</FieldLabel>
             <Input
+              id="mcp-server-test-bearer-token"
               type="password"
               value={bearerToken}
               onChange={(event) => setBearerToken(event.target.value)}
@@ -161,12 +162,12 @@ export default function McpServerTestPage() {
               </Button>
             </div>
             <div className="space-y-1.5">
-              <FieldLabel>Request</FieldLabel>
-              <Textarea readOnly value={lastInitializeRequest} className="font-mono text-xs min-h-24" />
+              <FieldLabel htmlFor="mcp-server-test-initialize-request">Request</FieldLabel>
+              <Textarea id="mcp-server-test-initialize-request" readOnly value={lastInitializeRequest} className="font-mono text-xs min-h-24" />
             </div>
             <div className="space-y-1.5">
-              <FieldLabel>Response</FieldLabel>
-              <Textarea readOnly value={lastInitializeResponse} className="font-mono text-xs min-h-40" />
+              <FieldLabel htmlFor="mcp-server-test-initialize-response">Response</FieldLabel>
+              <Textarea id="mcp-server-test-initialize-response" readOnly value={lastInitializeResponse} className="font-mono text-xs min-h-40" />
             </div>
           </CardContent>
         </Card>
@@ -183,12 +184,12 @@ export default function McpServerTestPage() {
               </Button>
             </div>
             <div className="space-y-1.5">
-              <FieldLabel>Request</FieldLabel>
-              <Textarea readOnly value={lastListToolsRequest} className="font-mono text-xs min-h-24" />
+              <FieldLabel htmlFor="mcp-server-test-tools-request">Request</FieldLabel>
+              <Textarea id="mcp-server-test-tools-request" readOnly value={lastListToolsRequest} className="font-mono text-xs min-h-24" />
             </div>
             <div className="space-y-1.5">
-              <FieldLabel>Response</FieldLabel>
-              <Textarea readOnly value={lastListToolsResponse} className="font-mono text-xs min-h-40" />
+              <FieldLabel htmlFor="mcp-server-test-tools-response">Response</FieldLabel>
+              <Textarea id="mcp-server-test-tools-response" readOnly value={lastListToolsResponse} className="font-mono text-xs min-h-40" />
             </div>
           </CardContent>
         </Card>

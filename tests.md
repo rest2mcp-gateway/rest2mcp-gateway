@@ -2,7 +2,9 @@
 
 ## Backend Integration Tests
 
-Current backend integration coverage lives in `tests/integration/runtime.workflows.test.ts`.
+Current backend integration coverage lives in `backend/tests/integration/runtime.workflows.test.ts`.
+
+Delete and dependency-guard coverage also lives in `backend/tests/integration/admin.deletion.test.ts`.
 
 These tests are workflow-oriented. They do not heavily test each admin API in isolation. Instead, they build real draft config through admin endpoints, publish it, and then verify the resulting public runtime behavior.
 
@@ -210,3 +212,102 @@ Protected runtime auth now validates:
 - required tool scopes for `tools/call`
 
 Protected-resource metadata also advertises the union of published tool scopes for the server via `scopes_supported`.
+
+#### 8. Guarded Admin Deletes
+
+This test group verifies that destructive admin actions fail closed when configuration is still referenced.
+
+Covered cases:
+
+1. deleting a backend API that is still referenced by a tool mapping returns `409`
+2. deleting a backend resource that is still referenced by a tool mapping returns `409`
+3. deleting a scope that is still assigned to a tool returns `409`
+4. deleting the dependent tool first allows the scope, resource, and API deletes to succeed
+
+## Frontend Testing Strategy
+
+Frontend testing should use three layers with different responsibilities.
+
+### 1. Service and Helper Tests in Vitest
+
+These are the fastest tests and should cover:
+
+- API client request behavior
+- auth/session storage behavior
+- runtime response parsing
+- other pure helpers that do not need a full rendered screen
+
+This layer is the right place to catch regressions like:
+
+- sending `Content-Type: application/json` on empty `DELETE` requests
+- failing to parse `text/event-stream` runtime responses
+- auth/session request header issues
+
+Current implementation:
+
+- `frontend/src/services/api-client.test.ts`
+- `frontend/src/providers/AuthProvider.test.tsx`
+
+### 2. Page and Component Tests in Vitest + Testing Library
+
+These tests should focus on critical admin workflows with mocked APIs:
+
+- login flow
+- delete confirmations
+- OpenAPI import preview/error states
+- dashboard publish state rendering
+- protected vs public MCP test screens
+
+Guideline:
+
+- test user-visible behavior, not component internals
+- mock network boundaries at the API client layer
+- prioritize high-risk pages over broad shallow coverage
+
+Current implementation:
+
+- `frontend/src/pages/LoginPage.test.tsx`
+- `frontend/src/pages/DashboardPage.test.tsx`
+- `frontend/src/pages/OpenApiImportPage.test.tsx`
+- `frontend/src/pages/McpServerTestPage.test.tsx`
+- `frontend/src/pages/ToolTestPage.test.tsx`
+- `frontend/src/components/AppSidebar.test.tsx`
+- `frontend/src/components/ProtectedRoute.test.tsx`
+- `frontend/src/components/shared.test.tsx`
+- shared render helpers in:
+  - `frontend/src/test/render.tsx`
+  - `frontend/src/test/fixtures.ts`
+
+### 3. Browser Smoke Tests in Playwright
+
+Playwright should stay small and cover only top-level paths that prove the app boots and the main flows still work in a real browser.
+
+Recommended smoke coverage:
+
+- sign in
+- create or import a minimal API/server/tool
+- run MCP initialize and tools/list tests
+- delete an unmapped entity successfully
+- verify a guarded delete shows the expected failure
+
+### Practical Gate
+
+For now, the repo should keep:
+
+- backend unit tests
+- backend integration tests
+- frontend Vitest tests
+- frontend lint
+
+The current frontend Vitest suite now covers:
+
+- auth session restoration and unauthorized reset
+- protected-route redirects
+- login success and failure
+- dashboard publish-state rendering
+- OpenAPI preview and import gating
+- sidebar logout behavior
+- MCP initialize and tools/list runtime test screens
+- tool test request prefilling, runtime responses, and invalid JSON handling
+
+The next addition should be a minimal Playwright smoke workflow rather than a large browser matrix.

@@ -26,7 +26,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ErrorState, LoadingState, PageHeader, FieldLabel } from "@/components/shared";
-import type { BackendApi, BackendResource, RiskLevel, Scope, ToolFormData } from "@/types/api";
+import type { BackendApi, BackendResource, RiskLevel, Scope, ToolFormData } from "@/contracts/admin-api";
 
 const prettyJson = (value: unknown) => JSON.stringify(value ?? {}, null, 2);
 const prettyArrayJson = (value: unknown) => JSON.stringify(value ?? [], null, 2);

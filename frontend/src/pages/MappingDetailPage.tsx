@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ErrorState, LoadingState, PageHeader, FieldLabel } from "@/components/shared";
-import type { BackendApi, BackendResource, Tool, ToolMappingFormData } from "@/types/api";
+import type { BackendApi, BackendResource, Tool, ToolMappingFormData } from "@/contracts/admin-api";
 
 const prettyJson = (value: unknown) => JSON.stringify(value ?? {}, null, 2);
 const EMPTY_TOOLS: Tool[] = [];

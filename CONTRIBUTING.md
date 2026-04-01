@@ -7,6 +7,7 @@ This repository uses local Git hooks and GitHub Actions to keep `main` releasabl
 - `pre-commit` runs `npm run verify:commit`
 - `pre-push` runs `npm run verify:push`
 - CI runs the full remote enforcement on pushes and pull requests, including backend integration tests
+- the admin API contract is exported from the backend and checked into the repo so the frontend can consume generated types
 
 Install dependencies with:
 
@@ -16,11 +17,14 @@ npm install
 
 The root `prepare` script installs Husky hooks automatically after install.
 
+The repository root is a workspace orchestrator. Backend-specific scripts and dependencies live in `backend/`, frontend-specific scripts and dependencies live in `frontend/`, and the root scripts delegate to those packages.
+
 ## Local Quality Gates
 
 Use these commands during development:
 
 ```bash
+npm run check:api
 npm run typecheck
 npm run build
 npm run test:backend:unit
@@ -34,7 +38,7 @@ Expected workflow:
 1. Commit locally as often as needed.
 2. Keep commits small and coherent.
 3. Let `pre-commit` catch fast type and backend unit-test regressions.
-4. Let `pre-push` block pushes if build, backend unit tests, frontend tests, or frontend lint are red.
+4. Let `pre-push` block pushes if generated API artifacts are stale or if build, backend unit tests, frontend tests, or frontend lint are red.
 5. Push only when the branch is in a releasable state.
 
 The local `pre-push` hook intentionally skips backend integration tests because they require opening local listeners and can be environment-sensitive. Those integration tests still run in GitHub Actions.
@@ -53,6 +57,7 @@ For release preparation, use the checklist in [`docs/release-checklist.md`](docs
 Before opening a pull request, make sure:
 
 - `npm run build` passes
+- `npm run check:api` passes
 - `npm run test:backend:unit` passes
 - `npm run test:backend:integration` passes
 - `npm run test:frontend` passes

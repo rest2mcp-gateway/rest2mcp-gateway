@@ -174,8 +174,9 @@ export default function ToolTestPage() {
           <div className="space-y-1.5">
             {server?.accessMode === "protected" ? (
               <>
-                <FieldLabel required>Bearer Token</FieldLabel>
+                <FieldLabel htmlFor="tool-test-bearer-token" required>Bearer Token</FieldLabel>
                 <Input
+                  id="tool-test-bearer-token"
                   type="password"
                   value={bearerToken}
                   onChange={(event) => setBearerToken(event.target.value)}
@@ -186,8 +187,9 @@ export default function ToolTestPage() {
           </div>
 
           <div className="space-y-1.5">
-            <FieldLabel>Request Body</FieldLabel>
+            <FieldLabel htmlFor="tool-test-request-body">Request Body</FieldLabel>
             <Textarea
+              id="tool-test-request-body"
               value={requestBody}
               onChange={(event) => setRequestBody(event.target.value)}
               className="font-mono text-xs min-h-72"
@@ -195,8 +197,8 @@ export default function ToolTestPage() {
           </div>
 
           <div className="space-y-1.5">
-            <FieldLabel>Response</FieldLabel>
-            <Textarea readOnly value={responseBody} className="font-mono text-xs min-h-72" />
+            <FieldLabel htmlFor="tool-test-response-body">Response</FieldLabel>
+            <Textarea id="tool-test-response-body" readOnly value={responseBody} className="font-mono text-xs min-h-72" />
           </div>
         </CardContent>
       </Card>

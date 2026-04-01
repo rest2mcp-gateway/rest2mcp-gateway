@@ -8,7 +8,7 @@ import {
   PaginationNext,
   PaginationPrevious
 } from "@/components/ui/pagination";
-import type { PaginationMeta } from "@/types/api";
+import type { PaginationMeta } from "@/contracts/admin-api";
 
 interface PageHeaderProps {
   title: string;

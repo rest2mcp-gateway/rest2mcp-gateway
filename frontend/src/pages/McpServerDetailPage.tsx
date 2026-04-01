@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState, ErrorState, LoadingState, PageHeader, StatusBadge, FieldLabel } from "@/components/shared";
-import type { McpServerFormData } from "@/types/api";
+import type { McpServerFormData } from "@/contracts/admin-api";
 
 export default function McpServerDetailPage() {
   const { id } = useParams<{ id: string }>();

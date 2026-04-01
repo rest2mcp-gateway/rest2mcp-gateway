@@ -182,8 +182,9 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">Publish Notes</label>
+                      <label htmlFor="publish-notes" className="text-sm font-medium text-foreground">Publish Notes</label>
                       <Textarea
+                        id="publish-notes"
                         value={publishNotes}
                         onChange={(event) => setPublishNotes(event.target.value)}
                         placeholder={autoPublishDrafts ? "Disabled in development because publish is automatic" : "Optional notes for this snapshot publish"}

@@ -24,7 +24,7 @@ import {
 import { PageHeader, MethodBadge, EmptyState, ErrorState, LoadingState, FieldLabel } from "@/components/shared";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import type { AuthType, BackendApiFormData } from "@/types/api";
+import type { AuthType, BackendApiFormData } from "@/contracts/admin-api";
 
 export default function BackendApiDetailPage() {
   const { id } = useParams<{ id: string }>();

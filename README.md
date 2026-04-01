@@ -146,12 +146,18 @@ Deployment notes:
 
 ```bash
 npm run dev
+npm run generate:api
+npm run check:api
 npm run build
 npm start
 npm test
 npm run db:generate
 npm run db:push
 ```
+
+`npm run generate:api` exports the backend OpenAPI document to `frontend/openapi/admin-api.json` and regenerates the frontend API types in `frontend/src/generated/admin-api.d.ts`.
+
+The repository is organized as a root workspace orchestrator plus two application packages: the Fastify backend in `backend/` and the React admin frontend in `frontend/`.
 
 ## License
 

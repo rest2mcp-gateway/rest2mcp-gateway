@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+backend/node_modules/
 frontend/node_modules/
 
 # Build output
@@ -26,6 +27,7 @@ lerna-debug.log*
 
 # Local data and generated secrets
 data/db/
+backend/data/db/
 data/dev-secrets.json
 
 # Test and browser artifacts

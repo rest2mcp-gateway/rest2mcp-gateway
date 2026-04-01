@@ -5,7 +5,10 @@ import {
   type AuthUser,
   type EnvConfig
 } from "@/lib/auth";
+import { adminApiPaths } from "@/contracts/admin-api";
 import type {
+  AdminMethod,
+  AdminPath,
   AuthServerConfig,
   AuthServerConfigFormData,
   BackendApi,
@@ -27,26 +30,31 @@ import type {
   Tool,
   ToolFormData,
   ToolMapping,
-  ToolMappingFormData
-} from "@/types/api";
+  ToolMappingFormData,
+  QueryParams,
+  RequestBody as ContractRequestBody,
+  ResponseContent,
+  ResponseData as ContractResponseData
+} from "@/contracts/admin-api";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api/admin/v1";
 const MCP_BASE = import.meta.env.VITE_MCP_BASE_URL || window.location.origin;
 
-type ApiEnvelope<T> = {
-  data: T;
-  meta?: Record<string, unknown>;
-};
-
-type LoginResponse = {
-  token: string;
-  user: AuthUser;
-  env_config: EnvConfig;
-};
+type LoginResponse = ContractResponseData<"/auth/login", "post">;
+type MeResponse = ContractResponseData<"/auth/me", "get">;
+type PrimitiveQuery = Record<string, string | number | boolean | undefined | null>;
+type ArrayItem<T> = T extends Array<infer Item> ? Item : never;
 
 const getAccessToken = () => getStoredSession()?.accessToken ?? null;
 const getOrganizationId = () => getStoredSession()?.user.organizationId ?? null;
 const defaultPageSize = 10;
+const requireOrganizationId = () => {
+  const organizationId = getOrganizationId();
+  if (!organizationId) {
+    throw new Error("No organization is available for the current session.");
+  }
+  return organizationId;
+};
 
 const normalizeBackendApiPayload = (data: Partial<BackendApiFormData>) => {
   const payload: Record<string, unknown> = {
@@ -91,7 +99,7 @@ const normalizeBackendApiPayload = (data: Partial<BackendApiFormData>) => {
   return payload;
 };
 
-const withQuery = (path: string, query?: Record<string, string | number | boolean | undefined | null>) => {
+const withQuery = (path: string, query?: PrimitiveQuery) => {
   if (!query) {
     return path;
   }
@@ -108,22 +116,31 @@ const withQuery = (path: string, query?: Record<string, string | number | boolea
   return serialized ? `${path}?${serialized}` : path;
 };
 
-async function request<T>(
+async function requestAdminContent<Path extends AdminPath, Method extends AdminMethod<Path>>(
+  _schemaPath: Path,
   path: string,
-  options?: RequestInit & { includeAuth?: boolean; handleUnauthorized?: boolean }
-): Promise<T> {
-  const accessToken = options?.includeAuth === false ? null : getAccessToken();
-  const hasBody = options?.body !== undefined && options?.body !== null;
-  const res = await fetch(`${API_BASE}${path}`, {
+  options: {
+    method: Method;
+    query?: QueryParams<Path, Method>;
+    body?: ContractRequestBody<Path, Method>;
+    headers?: HeadersInit;
+    includeAuth?: boolean;
+    handleUnauthorized?: boolean;
+  }
+): Promise<ResponseContent<Path, Method>> {
+  const accessToken = options.includeAuth === false ? null : getAccessToken();
+  const hasBody = options.body !== undefined && options.body !== null;
+  const res = await fetch(`${API_BASE}${withQuery(path, options.query as PrimitiveQuery | undefined)}`, {
+    method: options.method.toUpperCase(),
     headers: {
       ...(hasBody ? { "Content-Type": "application/json" } : {}),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      ...options?.headers
+      ...options.headers
     },
-    ...options
+    body: hasBody ? JSON.stringify(options.body) : undefined
   });
 
-  if (res.status === 401 && options?.handleUnauthorized !== false) {
+  if (res.status === 401 && options.handleUnauthorized !== false) {
     clearStoredSession();
     emitUnauthorizedEvent();
     throw new Error("Your session has expired. Please sign in again.");
@@ -135,19 +152,35 @@ async function request<T>(
   }
 
   if (res.status === 204) {
-    return undefined as T;
+    return undefined as ResponseContent<Path, Method>;
   }
 
-  const json = await res.json() as T | ApiEnvelope<T>;
-  if (json && typeof json === "object" && "data" in json) {
-    return (json as ApiEnvelope<T>).data;
-  }
-  return json as T;
+  return res.json() as Promise<ResponseContent<Path, Method>>;
 }
 
-async function requestPaginated<T>(path: string, query?: Record<string, string | number | boolean | undefined | null>): Promise<PaginatedResult<T>> {
+async function requestAdmin<Path extends AdminPath, Method extends AdminMethod<Path>>(
+  schemaPath: Path,
+  path: string,
+  options: {
+    method: Method;
+    query?: QueryParams<Path, Method>;
+    body?: ContractRequestBody<Path, Method>;
+    headers?: HeadersInit;
+    includeAuth?: boolean;
+    handleUnauthorized?: boolean;
+  }
+): Promise<ContractResponseData<Path, Method>> {
+  const content = await requestAdminContent(schemaPath, path, options);
+  return content.data;
+}
+
+async function requestAdminPaginated<Path extends AdminPath>(
+  schemaPath: Path,
+  path: string,
+  query?: QueryParams<Path, "get">
+): Promise<PaginatedResult<ArrayItem<ContractResponseData<Path, "get">>>> {
   const accessToken = getAccessToken();
-  const res = await fetch(`${API_BASE}${withQuery(path, query)}`, {
+  const res = await fetch(`${API_BASE}${withQuery(path, query as PrimitiveQuery | undefined)}`, {
     headers: {
       "Content-Type": "application/json",
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
@@ -165,18 +198,40 @@ async function requestPaginated<T>(path: string, query?: Record<string, string |
     throw new Error(`API error ${res.status}: ${body}`);
   }
 
-  const json = await res.json() as ApiEnvelope<T[]>;
-  const meta = (json.meta ?? {}) as { pagination?: PaginationMeta };
+  const json = await res.json() as ResponseContent<Path, "get">;
+  const meta = "meta" in json ? json.meta : undefined;
+  const pagination = meta && typeof meta === "object" && meta !== null && "pagination" in meta
+    ? (meta.pagination as PaginationMeta)
+    : {
+        page: Number((query as PrimitiveQuery | undefined)?.page ?? 1),
+        pageSize: Number((query as PrimitiveQuery | undefined)?.pageSize ?? defaultPageSize),
+        total: Array.isArray(json.data) ? json.data.length : 0,
+        pageCount: 1
+      };
 
   return {
-    items: json.data ?? [],
-    pagination: meta.pagination ?? {
-      page: Number(query?.page ?? 1),
-      pageSize: Number(query?.pageSize ?? defaultPageSize),
-      total: Array.isArray(json.data) ? json.data.length : 0,
-      pageCount: 1
-    }
+    items: (json.data ?? []) as ArrayItem<ContractResponseData<Path, "get">>[],
+    pagination
   };
+}
+
+async function requestAdminDelete(path: string, options?: { includeAuth?: boolean; handleUnauthorized?: boolean }) {
+  const accessToken = options?.includeAuth === false ? null : getAccessToken();
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "DELETE",
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined
+  });
+
+  if (res.status === 401 && options?.handleUnauthorized !== false) {
+    clearStoredSession();
+    emitUnauthorizedEvent();
+    throw new Error("Your session has expired. Please sign in again.");
+  }
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`API error ${res.status}: ${body}`);
+  }
 }
 
 async function requestRuntime<T>(path: string, payload: unknown, accessToken?: string): Promise<T> {
@@ -184,6 +239,7 @@ async function requestRuntime<T>(path: string, payload: unknown, accessToken?: s
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
     },
     body: JSON.stringify(payload)
@@ -194,18 +250,43 @@ async function requestRuntime<T>(path: string, payload: unknown, accessToken?: s
     throw new Error(`API error ${res.status}: ${body}`);
   }
 
+  const contentType = res.headers.get("content-type") ?? "";
+  if (contentType.includes("text/event-stream")) {
+    const body = await res.text();
+    const dataEvents = body
+      .split(/\r?\n\r?\n/)
+      .flatMap((chunk) =>
+        chunk
+          .split(/\r?\n/)
+          .filter((line) => line.startsWith("data:"))
+          .map((line) => line.slice(5).trim())
+      )
+      .filter(Boolean);
+
+    const lastEvent = dataEvents.at(-1);
+    if (!lastEvent) {
+      throw new Error("Runtime returned an empty event stream");
+    }
+
+    return JSON.parse(lastEvent) as T;
+  }
+
   return res.json() as Promise<T>;
 }
 
 export const getMcpRuntimeUrl = (organizationSlug: string, serverSlug: string) =>
   `${MCP_BASE.replace(/\/$/, "")}/mcp/${organizationSlug}/${serverSlug}`;
 
-async function listAllPages<T>(path: string, baseQuery?: Record<string, string | number | boolean | undefined | null>): Promise<T[]> {
-  const firstPage = await requestPaginated<T>(path, {
+async function listAllPages<Path extends AdminPath>(
+  schemaPath: Path,
+  path: string,
+  baseQuery?: QueryParams<Path, "get">
+): Promise<ArrayItem<ContractResponseData<Path, "get">>[]> {
+  const firstPage = await requestAdminPaginated(schemaPath, path, {
     ...baseQuery,
     page: 1,
     pageSize: 100
-  });
+  } as QueryParams<Path, "get">);
 
   if (firstPage.pagination.pageCount <= 1) {
     return firstPage.items;
@@ -213,11 +294,11 @@ async function listAllPages<T>(path: string, baseQuery?: Record<string, string |
 
   const remaining = await Promise.all(
     Array.from({ length: firstPage.pagination.pageCount - 1 }, (_, index) =>
-      requestPaginated<T>(path, {
+      requestAdminPaginated(schemaPath, path, {
         ...baseQuery,
         page: index + 2,
         pageSize: 100
-      })
+      } as QueryParams<Path, "get">)
     )
   );
 
@@ -226,45 +307,53 @@ async function listAllPages<T>(path: string, baseQuery?: Record<string, string |
 
 export const authApi = {
   login: async (username: string, password: string): Promise<LoginResponse> =>
-    request("/auth/login", {
-      method: "POST",
+    requestAdmin(adminApiPaths.auth.login, adminApiPaths.auth.login, {
+      method: "post",
       includeAuth: false,
       handleUnauthorized: false,
-      body: JSON.stringify({ username, password })
+      body: { username, password }
     }),
-  me: async (): Promise<{ user: AuthUser; env_config: EnvConfig }> =>
-    request("/auth/me")
+  me: async (): Promise<MeResponse> =>
+    requestAdmin(adminApiPaths.auth.me, adminApiPaths.auth.me, {
+      method: "get"
+    })
 };
 
 export const organizationsApi = {
   list: async (page = 1, pageSize = defaultPageSize, search?: string): Promise<PaginatedResult<Organization>> =>
-    requestPaginated("/organizations", { page, pageSize, search }),
+    requestAdminPaginated(adminApiPaths.organizations.list, adminApiPaths.organizations.list, { page, pageSize, search }),
   listAll: async (): Promise<Organization[]> =>
-    listAllPages("/organizations")
+    listAllPages(adminApiPaths.organizations.list, adminApiPaths.organizations.list)
 };
 
 export const securityApi = {
   getAuthServer: async (): Promise<AuthServerConfig | null> =>
-    request("/security/auth-server"),
+    requestAdmin(adminApiPaths.security.authServer, adminApiPaths.security.authServer, {
+      method: "get"
+    }),
   saveAuthServer: async (data: AuthServerConfigFormData): Promise<AuthServerConfig> =>
-    request("/security/auth-server", {
-      method: "PUT",
-      body: JSON.stringify(data)
+    requestAdmin(adminApiPaths.security.authServer, adminApiPaths.security.authServer, {
+      method: "put",
+      body: data
     })
 };
 
 export const configApi = {
   validate: async (): Promise<ConfigValidationResult> =>
-    request(`/config/validate/${getOrganizationId()}`),
+    requestAdmin("/config/validate/{organizationId}", adminApiPaths.config.validate(requireOrganizationId()), {
+      method: "get"
+    }),
   listSnapshots: async (): Promise<RuntimeSnapshot[]> =>
-    request(`/config/snapshots/${getOrganizationId()}`),
+    requestAdmin("/config/snapshots/{organizationId}", adminApiPaths.config.snapshots(requireOrganizationId()), {
+      method: "get"
+    }),
   publish: async (notes?: string): Promise<PublishResult> =>
-    request("/config/publish", {
-      method: "POST",
-      body: JSON.stringify({
-        organizationId: getOrganizationId(),
+    requestAdmin(adminApiPaths.config.publish, adminApiPaths.config.publish, {
+      method: "post",
+      body: {
+        organizationId: requireOrganizationId(),
         notes
-      })
+      }
     })
 };
 
@@ -277,9 +366,9 @@ export const openApiImportApi = {
     specText: string;
     targetMcpServerId?: string;
   }): Promise<OpenApiImportPreview> =>
-    request("/openapi-import/preview", {
-      method: "POST",
-      body: JSON.stringify(payload)
+    requestAdmin(adminApiPaths.openApiImport.preview, adminApiPaths.openApiImport.preview, {
+      method: "post",
+      body: payload
     }),
   execute: async (payload: {
     name: string;
@@ -293,9 +382,9 @@ export const openApiImportApi = {
       exposeAsTool: boolean;
     }>;
   }): Promise<OpenApiImportResult> =>
-    request("/openapi-import/execute", {
-      method: "POST",
-      body: JSON.stringify(payload)
+    requestAdmin(adminApiPaths.openApiImport.execute, adminApiPaths.openApiImport.execute, {
+      method: "post",
+      body: payload
     })
 };
 
@@ -306,9 +395,14 @@ export const mcpRuntimeApi = {
 
 export const backendApisApi = {
   list: async (page = 1, pageSize = defaultPageSize, search?: string): Promise<PaginatedResult<BackendApi>> =>
-    requestPaginated("/backend-apis", { organizationId: getOrganizationId(), page, pageSize, search }),
+    requestAdminPaginated(adminApiPaths.backendApis.list, adminApiPaths.backendApis.list, {
+      organizationId: requireOrganizationId(),
+      page,
+      pageSize,
+      search
+    }),
   listAll: async (): Promise<BackendApi[]> =>
-    listAllPages("/backend-apis", { organizationId: getOrganizationId() }),
+    listAllPages(adminApiPaths.backendApis.list, adminApiPaths.backendApis.list, { organizationId: requireOrganizationId() }),
   get: async (id: string): Promise<BackendApi> => {
     const rows = await backendApisApi.listAll();
     const row = rows.find((item) => item.id === id);
@@ -318,74 +412,73 @@ export const backendApisApi = {
     return row;
   },
   create: async (data: BackendApiFormData): Promise<BackendApi> =>
-    request("/backend-apis", {
-      method: "POST",
-      body: JSON.stringify({
+    requestAdmin(adminApiPaths.backendApis.list, adminApiPaths.backendApis.list, {
+      method: "post",
+      body: {
         ...normalizeBackendApiPayload(data),
-        organizationId: getOrganizationId()
-      })
+        organizationId: requireOrganizationId()
+      } as BackendApiFormData
     }),
   update: async (id: string, data: Partial<BackendApiFormData>): Promise<BackendApi> =>
-    request(`/backend-apis/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(normalizeBackendApiPayload(data))
+    requestAdmin("/backend-apis/{id}", adminApiPaths.backendApis.byId(id), {
+      method: "patch",
+      body: normalizeBackendApiPayload(data) as Partial<BackendApiFormData>
     }),
-  delete: async (id: string): Promise<BackendApi> =>
-    request(`/backend-apis/${id}`, {
-      method: "DELETE"
-    })
+  delete: async (id: string): Promise<void> =>
+    requestAdminDelete(adminApiPaths.backendApis.byId(id))
 };
 
 export const resourcesApi = {
   list: async (backendApiId: string, page = 1, pageSize = defaultPageSize): Promise<PaginatedResult<BackendResource>> =>
-    requestPaginated("/backend-resources", { backendApiId, page, pageSize }),
+    requestAdminPaginated(adminApiPaths.backendResources.list, adminApiPaths.backendResources.list, { backendApiId, page, pageSize }),
   listAll: async (backendApiId: string): Promise<BackendResource[]> =>
-    listAllPages("/backend-resources", { backendApiId }),
+    listAllPages(adminApiPaths.backendResources.list, adminApiPaths.backendResources.list, { backendApiId }),
   create: async (data: BackendResourceFormData): Promise<BackendResource> =>
-    request("/backend-resources", {
-      method: "POST",
-      body: JSON.stringify(data)
+    requestAdmin(adminApiPaths.backendResources.list, adminApiPaths.backendResources.list, {
+      method: "post",
+      body: data
     }),
   update: async (id: string, data: Partial<BackendResourceFormData>): Promise<BackendResource> =>
-    request(`/backend-resources/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(data)
+    requestAdmin("/backend-resources/{id}", adminApiPaths.backendResources.byId(id), {
+      method: "patch",
+      body: data
     }),
-  delete: async (id: string): Promise<BackendResource> =>
-    request(`/backend-resources/${id}`, {
-      method: "DELETE"
-    })
+  delete: async (id: string): Promise<void> =>
+    requestAdminDelete(adminApiPaths.backendResources.byId(id))
 };
 
 export const scopesApi = {
   list: async (page = 1, pageSize = defaultPageSize, search?: string): Promise<PaginatedResult<Scope>> =>
-    requestPaginated("/scopes", { organizationId: getOrganizationId(), page, pageSize, search }),
+    requestAdminPaginated(adminApiPaths.scopes.list, adminApiPaths.scopes.list, {
+      organizationId: requireOrganizationId(),
+      page,
+      pageSize,
+      search
+    }),
   listAll: async (): Promise<Scope[]> =>
-    listAllPages("/scopes", { organizationId: getOrganizationId() }),
+    listAllPages(adminApiPaths.scopes.list, adminApiPaths.scopes.list, { organizationId: requireOrganizationId() }),
   create: async (data: ScopeFormData): Promise<Scope> =>
-    request("/scopes", {
-      method: "POST",
-      body: JSON.stringify({
+    requestAdmin(adminApiPaths.scopes.list, adminApiPaths.scopes.list, {
+      method: "post",
+      body: {
         ...data,
-        organizationId: getOrganizationId()
-      })
+        organizationId: requireOrganizationId()
+      } as ScopeFormData
     }),
   update: async (id: string, data: Partial<ScopeFormData>): Promise<Scope> =>
-    request(`/scopes/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(data)
+    requestAdmin("/scopes/{id}", adminApiPaths.scopes.byId(id), {
+      method: "patch",
+      body: data
     }),
-  delete: async (id: string): Promise<Scope> =>
-    request(`/scopes/${id}`, {
-      method: "DELETE"
-    })
+  delete: async (id: string): Promise<void> =>
+    requestAdminDelete(adminApiPaths.scopes.byId(id))
 };
 
 export const toolMappingsApi = {
   list: async (page = 1, pageSize = defaultPageSize): Promise<PaginatedResult<ToolMapping>> =>
-    requestPaginated("/tool-mappings", { page, pageSize }),
+    requestAdminPaginated(adminApiPaths.toolMappings.list, adminApiPaths.toolMappings.list, { page, pageSize }),
   listAll: async (): Promise<ToolMapping[]> =>
-    listAllPages("/tool-mappings"),
+    listAllPages(adminApiPaths.toolMappings.list, adminApiPaths.toolMappings.list),
   get: async (id: string): Promise<ToolMapping> => {
     const rows = await toolMappingsApi.listAll();
     const row = rows.find((item) => item.id === id);
@@ -395,22 +488,27 @@ export const toolMappingsApi = {
     return row;
   },
   create: async (data: ToolMappingFormData): Promise<ToolMapping> =>
-    request("/tool-mappings", {
-      method: "POST",
-      body: JSON.stringify(data)
+    requestAdmin(adminApiPaths.toolMappings.list, adminApiPaths.toolMappings.list, {
+      method: "post",
+      body: data
     }),
   update: async (id: string, data: Partial<ToolMappingFormData>): Promise<ToolMapping> =>
-    request(`/tool-mappings/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(data)
+    requestAdmin("/tool-mappings/{id}", adminApiPaths.toolMappings.byId(id), {
+      method: "patch",
+      body: data
     })
 };
 
 export const mcpServersApi = {
   list: async (page = 1, pageSize = defaultPageSize, search?: string): Promise<PaginatedResult<McpServer>> =>
-    requestPaginated("/mcp-servers", { organizationId: getOrganizationId(), page, pageSize, search }),
+    requestAdminPaginated(adminApiPaths.mcpServers.list, adminApiPaths.mcpServers.list, {
+      organizationId: requireOrganizationId(),
+      page,
+      pageSize,
+      search
+    }),
   listAll: async (): Promise<McpServer[]> =>
-    listAllPages("/mcp-servers", { organizationId: getOrganizationId() }),
+    listAllPages(adminApiPaths.mcpServers.list, adminApiPaths.mcpServers.list, { organizationId: requireOrganizationId() }),
   get: async (id: string): Promise<McpServer> => {
     const rows = await mcpServersApi.listAll();
     const row = rows.find((item) => item.id === id);
@@ -420,44 +518,43 @@ export const mcpServersApi = {
     return row;
   },
   create: async (data: McpServerFormData): Promise<McpServer> =>
-    request("/mcp-servers", {
-      method: "POST",
-      body: JSON.stringify({
+    requestAdmin(adminApiPaths.mcpServers.list, adminApiPaths.mcpServers.list, {
+      method: "post",
+      body: {
         ...data,
-        organizationId: getOrganizationId()
-      })
+        organizationId: requireOrganizationId()
+      } as McpServerFormData
     }),
   update: async (id: string, data: Partial<McpServerFormData>): Promise<McpServer> =>
-    request(`/mcp-servers/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(data)
+    requestAdmin("/mcp-servers/{id}", adminApiPaths.mcpServers.byId(id), {
+      method: "patch",
+      body: data
     }),
-  delete: async (id: string): Promise<McpServer> =>
-    request(`/mcp-servers/${id}`, {
-      method: "DELETE"
-    })
+  delete: async (id: string): Promise<void> =>
+    requestAdminDelete(adminApiPaths.mcpServers.byId(id))
 };
 
 export const toolsApi = {
   list: async (mcpServerId?: string, page = 1, pageSize = defaultPageSize): Promise<PaginatedResult<Tool>> =>
-    requestPaginated("/tools", { mcpServerId, page, pageSize }),
+    requestAdminPaginated(adminApiPaths.tools.list, adminApiPaths.tools.list, { mcpServerId, page, pageSize }),
   listAll: async (mcpServerId?: string): Promise<Tool[]> =>
-    listAllPages("/tools", { mcpServerId }),
-  get: async (id: string): Promise<Tool> => request(`/tools/${id}`),
+    listAllPages(adminApiPaths.tools.list, adminApiPaths.tools.list, { mcpServerId }),
+  get: async (id: string): Promise<Tool> =>
+    requestAdmin("/tools/{id}", adminApiPaths.tools.byId(id), {
+      method: "get"
+    }),
   create: async (data: ToolFormData): Promise<Tool> =>
-    request("/tools", {
-      method: "POST",
-      body: JSON.stringify(data)
+    requestAdmin(adminApiPaths.tools.list, adminApiPaths.tools.list, {
+      method: "post",
+      body: data
     }),
   update: async (id: string, data: Partial<ToolFormData>): Promise<Tool> =>
-    request(`/tools/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(data)
+    requestAdmin("/tools/{id}", adminApiPaths.tools.byId(id), {
+      method: "patch",
+      body: data
     }),
-  delete: async (id: string): Promise<Tool> =>
-    request(`/tools/${id}`, {
-      method: "DELETE"
-    }),
+  delete: async (id: string): Promise<void> =>
+    requestAdminDelete(adminApiPaths.tools.byId(id)),
   listByServer: async (serverId: string): Promise<Tool[]> =>
     toolsApi.listAll(serverId)
 };

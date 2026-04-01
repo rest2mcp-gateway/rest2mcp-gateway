@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import type { ScopeFormData } from "@/types/api";
+import type { ScopeFormData } from "@/contracts/admin-api";
 
 const defaultForm: ScopeFormData = { name: "", description: "", category: "", isSensitive: false };
 

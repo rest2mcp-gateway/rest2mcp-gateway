@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FieldLabel, LoadingState, PageHeader } from "@/components/shared";
 import { securityApi } from "@/services/api-client";
-import type { AuthServerConfigFormData } from "@/types/api";
+import type { AuthServerConfigFormData } from "@/contracts/admin-api";
 
 export default function SecurityPage() {
   const queryClient = useQueryClient();
