@@ -110,7 +110,6 @@ export const authServerConfigSchema = z.object({
   organizationId: uuidSchema.optional(),
   issuer: z.string().url(),
   jwksUri: z.string().url(),
-  authorizationServerMetadataUrl: z.string().nullable().optional(),
   createdAt: timestampSchema.optional(),
   updatedAt: timestampSchema.optional()
 });

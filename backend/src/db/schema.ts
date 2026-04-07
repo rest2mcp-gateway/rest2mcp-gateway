@@ -47,7 +47,6 @@ export const authServerConfigs = pgTable("auth_server_configs", {
   organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   issuer: text("issuer").notNull(),
   jwksUri: text("jwks_uri").notNull(),
-  authorizationServerMetadataUrl: text("authorization_server_metadata_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date())
 }, (table) => ({

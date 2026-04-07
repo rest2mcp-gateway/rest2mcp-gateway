@@ -2479,7 +2479,6 @@ export interface paths {
                                 issuer: string;
                                 /** Format: uri */
                                 jwksUri: string;
-                                authorizationServerMetadataUrl?: string | null;
                                 /** Format: date-time */
                                 createdAt?: string;
                                 /** Format: date-time */
@@ -2504,8 +2503,6 @@ export interface paths {
                         issuer: string;
                         /** Format: uri */
                         jwksUri: string;
-                        /** Format: uri */
-                        authorizationServerMetadataUrl?: string;
                     };
                 };
             };
@@ -2526,7 +2523,6 @@ export interface paths {
                                 issuer: string;
                                 /** Format: uri */
                                 jwksUri: string;
-                                authorizationServerMetadataUrl?: string | null;
                                 /** Format: date-time */
                                 createdAt?: string;
                                 /** Format: date-time */
@@ -2824,7 +2820,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/mcp/.well-known/oauth-protected-resource/{organizationSlug}/{serverSlug}": {
+    "/.well-known/oauth-protected-resource/mcp/{serverSlug}": {
         parameters: {
             query?: never;
             header?: never;
@@ -2836,7 +2832,6 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    organizationSlug: string;
                     serverSlug: string;
                 };
                 cookie?: never;
@@ -2860,7 +2855,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/mcp/{organizationSlug}/{serverSlug}": {
+    "/mcp/{serverSlug}": {
         parameters: {
             query?: never;
             header?: never;
@@ -2872,7 +2867,6 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    organizationSlug: string;
                     serverSlug: string;
                 };
                 cookie?: never;
@@ -2894,7 +2888,6 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    organizationSlug: string;
                     serverSlug: string;
                 };
                 cookie?: never;
@@ -2915,7 +2908,6 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    organizationSlug: string;
                     serverSlug: string;
                 };
                 cookie?: never;

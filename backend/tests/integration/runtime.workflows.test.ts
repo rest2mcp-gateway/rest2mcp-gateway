@@ -14,6 +14,12 @@ import {
   validateAndPublish
 } from "./helpers/workflows.js";
 
+const getResourceMetadataUrl = (wwwAuthenticateHeader: string | undefined) => {
+  const match = wwwAuthenticateHeader?.match(/resource_metadata="([^"]+)"/);
+  assert.ok(match?.[1], `Expected resource_metadata in WWW-Authenticate header, got: ${wwwAuthenticateHeader ?? "<missing>"}`);
+  return match[1];
+};
+
 test("publishes a minimal public runtime and exposes discovery plus tools/list", async () => {
   const handle = await createTestApp();
   try {
@@ -25,7 +31,7 @@ test("publishes a minimal public runtime and exposes discovery plus tools/list",
 
       const discovery = await getRuntimeDiscovery(handle.app, session);
       assert.deepEqual(discovery, {
-        resource: `http://localhost/mcp/${session.organizationSlug}/public-runtime-server`,
+        resource: "http://localhost/mcp/public-runtime-server",
         authorization_servers: []
       });
 
@@ -204,7 +210,8 @@ test("returns runtime tool errors from backend failure responses", async () => {
               text: JSON.stringify(
                 {
                   error: "backend_unavailable",
-                  message: "Stub backend failed"
+                  message: "Stub backend failed",
+                  status: 502
                 },
                 null,
                 2
@@ -212,8 +219,200 @@ test("returns runtime tool errors from backend failure responses", async () => {
             }
           ],
           structuredContent: {
+            status: 502,
             error: "backend_unavailable",
             message: "Stub backend failed"
+          },
+          isError: true
+        }
+      });
+    } finally {
+      await backend.close();
+    }
+  } finally {
+    await handle.close();
+  }
+});
+
+test("returns explicit fallback MCP tool errors for empty backend 404 responses", async () => {
+  const handle = await createTestApp();
+  try {
+    const session = await loginAsBootstrapAdmin(handle.app);
+    const backend = await createStubBackend();
+    try {
+      backend.on("POST", "/widgets/widget-missing", async () => ({
+        status: 404,
+        body: {}
+      }));
+
+      await createRuntimeFixture(handle.app, session, backend.baseUrl);
+      await validateAndPublish(handle.app, session);
+
+      const result = await callRuntime(handle.app, session, {
+        jsonrpc: "2.0",
+        id: 5,
+        method: "tools/call",
+        params: {
+          name: "echo_widget",
+          arguments: {
+            widgetId: "widget-missing",
+            name: "Missing",
+            count: 1,
+            tags: []
+          }
+        }
+      });
+
+      assert.deepEqual(result, {
+        jsonrpc: "2.0",
+        id: 5,
+        result: {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  status: 404,
+                  error: "backend_not_found",
+                  message: "Backend returned 404 Not Found"
+                },
+                null,
+                2
+              )
+            }
+          ],
+          structuredContent: {
+            status: 404,
+            error: "backend_not_found",
+            message: "Backend returned 404 Not Found"
+          },
+          isError: true
+        }
+      });
+    } finally {
+      await backend.close();
+    }
+  } finally {
+    await handle.close();
+  }
+});
+
+test("wraps array backend responses in structuredContent for MCP compatibility", async () => {
+  const handle = await createTestApp();
+  try {
+    const session = await loginAsBootstrapAdmin(handle.app);
+    const backend = await createStubBackend();
+    try {
+      const posts = [
+        { id: 1, title: "first post" },
+        { id: 2, title: "second post" }
+      ];
+
+      backend.on("POST", "/widgets/widget-list", async () => ({
+        status: 200,
+        body: posts
+      }));
+
+      await createRuntimeFixture(handle.app, session, backend.baseUrl);
+      await validateAndPublish(handle.app, session);
+
+      const result = await callRuntime(handle.app, session, {
+        jsonrpc: "2.0",
+        id: 6,
+        method: "tools/call",
+        params: {
+          name: "echo_widget",
+          arguments: {
+            widgetId: "widget-list",
+            name: "List",
+            count: 2,
+            tags: []
+          }
+        }
+      });
+
+      assert.deepEqual(result, {
+        jsonrpc: "2.0",
+        id: 6,
+        result: {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(posts, null, 2)
+            }
+          ],
+          structuredContent: {
+            items: posts
+          },
+          isError: false
+        }
+      });
+    } finally {
+      await backend.close();
+    }
+  } finally {
+    await handle.close();
+  }
+});
+
+test("wraps array backend error responses in structuredContent for MCP compatibility", async () => {
+  const handle = await createTestApp();
+  try {
+    const session = await loginAsBootstrapAdmin(handle.app);
+    const backend = await createStubBackend();
+    try {
+      const errors = [
+        { error: "invalid_post" },
+        { error: "missing_author" }
+      ];
+
+      backend.on("POST", "/widgets/widget-list-error", async () => ({
+        status: 400,
+        body: errors
+      }));
+
+      await createRuntimeFixture(handle.app, session, backend.baseUrl);
+      await validateAndPublish(handle.app, session);
+
+      const result = await callRuntime(handle.app, session, {
+        jsonrpc: "2.0",
+        id: 7,
+        method: "tools/call",
+        params: {
+          name: "echo_widget",
+          arguments: {
+            widgetId: "widget-list-error",
+            name: "List",
+            count: 2,
+            tags: []
+          }
+        }
+      });
+
+      assert.deepEqual(result, {
+        jsonrpc: "2.0",
+        id: 7,
+        result: {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  status: 400,
+                  error: "backend_bad_request",
+                  message: "Backend returned 400 Bad Request",
+                  details: errors
+                },
+                null,
+                2
+              )
+            }
+          ],
+          structuredContent: {
+            status: 400,
+            error: "backend_bad_request",
+            message: "Backend returned 400 Bad Request",
+            details: errors
           },
           isError: true
         }
@@ -425,8 +624,7 @@ test("serves a protected MCP runtime and validates bearer tokens against a stub 
 
       await upsertAuthServerConfig(handle.app, session, {
         issuer: authServer.issuer,
-        jwksUri: authServer.jwksUri,
-        authorizationServerMetadataUrl: authServer.authorizationServerMetadataUrl
+        jwksUri: authServer.jwksUri
       });
 
       const fixture = await createRuntimeFixture(
@@ -446,7 +644,7 @@ test("serves a protected MCP runtime and validates bearer tokens against a stub 
 
       const discovery = await getRuntimeDiscovery(handle.app, session);
       assert.deepEqual(discovery, {
-        resource: `http://localhost/mcp/${session.organizationSlug}/public-runtime-server`,
+        resource: "http://localhost/mcp/public-runtime-server",
         authorization_servers: [authServer.issuer],
         resource_name: "Public Runtime Server",
         scopes_supported: ["widgets.read"]
@@ -470,6 +668,23 @@ test("serves a protected MCP runtime and validates bearer tokens against a stub 
         String(unauthorized.response.headers["www-authenticate"] ?? ""),
         /resource_metadata=/
       );
+
+      const metadataUrl = getResourceMetadataUrl(
+        typeof unauthorized.response.headers["www-authenticate"] === "string"
+          ? unauthorized.response.headers["www-authenticate"]
+          : undefined
+      );
+      const metadataResponse = await handle.app.inject({
+        method: "GET",
+        url: new URL(metadataUrl).pathname
+      });
+      assert.equal(metadataResponse.statusCode, 200, metadataResponse.body);
+      assert.deepEqual(metadataResponse.json(), {
+        resource: "http://localhost/mcp/public-runtime-server",
+        authorization_servers: [authServer.issuer],
+        resource_name: "Public Runtime Server",
+        scopes_supported: ["widgets.read"]
+      });
 
       const accessToken = await authServer.issueToken({
         audience: "protected-runtime-audience",

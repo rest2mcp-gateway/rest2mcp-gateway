@@ -274,8 +274,8 @@ async function requestRuntime<T>(path: string, payload: unknown, accessToken?: s
   return res.json() as Promise<T>;
 }
 
-export const getMcpRuntimeUrl = (organizationSlug: string, serverSlug: string) =>
-  `${MCP_BASE.replace(/\/$/, "")}/mcp/${organizationSlug}/${serverSlug}`;
+export const getMcpRuntimeUrl = (serverSlug: string) =>
+  `${MCP_BASE.replace(/\/$/, "")}/mcp/${serverSlug}`;
 
 async function listAllPages<Path extends AdminPath>(
   schemaPath: Path,
@@ -389,8 +389,8 @@ export const openApiImportApi = {
 };
 
 export const mcpRuntimeApi = {
-  call: async <T>(organizationSlug: string, serverSlug: string, payload: unknown, accessToken?: string): Promise<T> =>
-    requestRuntime(getMcpRuntimeUrl(organizationSlug, serverSlug), payload, accessToken)
+  call: async <T>(serverSlug: string, payload: unknown, accessToken?: string): Promise<T> =>
+    requestRuntime(getMcpRuntimeUrl(serverSlug), payload, accessToken)
 };
 
 export const backendApisApi = {

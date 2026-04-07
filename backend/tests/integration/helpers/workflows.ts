@@ -15,6 +15,21 @@ type RuntimeFixture = {
   scopeIds: string[];
 };
 
+type CreateOrganizationInput = {
+  name: string;
+  slug: string;
+};
+
+type CreateUserInput = {
+  organizationId: string;
+  username: string;
+  name: string;
+  role: "super_admin" | "admin" | "editor" | "viewer";
+  authMode: "local" | "oidc";
+  password?: string;
+  isActive?: boolean;
+};
+
 type BackendApiAuthOptions =
   | {
       authType?: "none";
@@ -307,6 +322,74 @@ export const validateAndPublish = async (
   return publish.body.data.snapshot;
 };
 
+export const createOrganization = async (
+  app: FastifyInstance,
+  session: AdminSession,
+  payload: CreateOrganizationInput
+) => {
+  const result = await adminRequest(app, session, {
+    method: "POST",
+    url: "/api/admin/v1/organizations",
+    payload
+  });
+  assert.equal(result.response.statusCode, 200, result.response.body);
+  return result.body.data;
+};
+
+export const createUser = async (
+  app: FastifyInstance,
+  session: AdminSession,
+  payload: CreateUserInput
+) => {
+  const result = await adminRequest(app, session, {
+    method: "POST",
+    url: "/api/admin/v1/users",
+    payload
+  });
+  assert.equal(result.response.statusCode, 200, result.response.body);
+  return result.body.data;
+};
+
+export const updateUser = async (
+  app: FastifyInstance,
+  session: AdminSession,
+  userId: string,
+  payload: Partial<CreateUserInput>
+) => {
+  const result = await adminRequest(app, session, {
+    method: "PATCH",
+    url: `/api/admin/v1/users/${userId}`,
+    payload
+  });
+  assert.equal(result.response.statusCode, 200, result.response.body);
+  return result.body.data;
+};
+
+export const listExecutionLogs = async (
+  app: FastifyInstance,
+  session: AdminSession
+) => {
+  const result = await adminRequest(app, session, {
+    method: "GET",
+    url: `/api/admin/v1/execution-logs/${session.organizationId}`
+  });
+  assert.equal(result.response.statusCode, 200, result.response.body);
+  return result.body.data;
+};
+
+export const getTool = async (
+  app: FastifyInstance,
+  session: AdminSession,
+  toolId: string
+) => {
+  const result = await adminRequest(app, session, {
+    method: "GET",
+    url: `/api/admin/v1/tools/${toolId}`
+  });
+  assert.equal(result.response.statusCode, 200, result.response.body);
+  return result.body.data;
+};
+
 export const getRuntimeDiscovery = async (
   app: FastifyInstance,
   session: AdminSession,
@@ -314,7 +397,7 @@ export const getRuntimeDiscovery = async (
 ) => {
   const result = await request(app, {
     method: "GET",
-    url: `/mcp/.well-known/oauth-protected-resource/${session.organizationSlug}/${serverSlug}`
+    url: `/.well-known/oauth-protected-resource/mcp/${serverSlug}`
   });
   assert.equal(result.response.statusCode, 200, result.response.body);
   return result.body;
@@ -329,7 +412,7 @@ export const callRuntime = async (
 ) => {
   const result = await request(app, {
     method: "POST",
-    url: `/mcp/${session.organizationSlug}/${serverSlug}`,
+    url: `/mcp/${serverSlug}`,
     payload: body,
     headers: {
       accept: "application/json, text/event-stream",
@@ -360,7 +443,7 @@ export const callRuntimeRaw = async (
   }
 ) => request(app, {
   method,
-  url: `/mcp/${session.organizationSlug}/${serverSlug}`,
+  url: `/mcp/${serverSlug}`,
   payload: body,
   headers: {
     accept: method === "POST" ? "application/json, text/event-stream" : "text/event-stream",
@@ -396,7 +479,6 @@ export const upsertAuthServerConfig = async (
   payload: {
     issuer: string;
     jwksUri: string;
-    authorizationServerMetadataUrl?: string;
   }
 ) => {
   const result = await request(app, {

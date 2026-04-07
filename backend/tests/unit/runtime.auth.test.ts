@@ -23,6 +23,8 @@ const createRequest = (authorization?: string): FastifyRequest => ({
 test("getBearerToken extracts bearer tokens and ignores other headers", () => {
   assert.equal(getBearerToken("Bearer token-123"), "token-123");
   assert.equal(getBearerToken("bearer token-456"), "token-456");
+  assert.equal(getBearerToken("Bearer"), null);
+  assert.equal(getBearerToken("Bearer    "), null);
   assert.equal(getBearerToken("Basic abc"), null);
   assert.equal(getBearerToken(undefined), null);
 });
@@ -31,7 +33,6 @@ test("buildProtectedResourceMetadata returns resource metadata with scopes", () 
   const request = createRequest();
   const metadata = buildProtectedResourceMetadata(
     request,
-    "acme",
     "public-server",
     {
       issuer: "https://issuer.example.com",
@@ -42,7 +43,7 @@ test("buildProtectedResourceMetadata returns resource metadata with scopes", () 
   );
 
   assert.deepEqual(metadata, {
-    resource: "https://gateway.example.com/mcp/acme/public-server",
+    resource: "https://gateway.example.com/mcp/public-server",
     authorization_servers: ["https://issuer.example.com"],
     resource_name: "Acme MCP",
     scopes_supported: ["widgets:read", "widgets:write"]
@@ -53,8 +54,8 @@ test("buildUnauthorizedChallenge points to protected resource metadata", () => {
   const request = createRequest();
 
   assert.equal(
-    buildUnauthorizedChallenge(request, "acme", "public-server"),
-    `Bearer resource_metadata="${getProtectedResourceMetadataUrl(request, "acme", "public-server")}"`
+    buildUnauthorizedChallenge(request, "public-server"),
+    `Bearer resource_metadata="${getProtectedResourceMetadataUrl(request, "public-server")}"`
   );
 });
 
@@ -67,12 +68,22 @@ test("parseTokenScopes supports string and array claims", () => {
 test("ensureTokenHasScopes accepts combined scope and scp claims", () => {
   assert.doesNotThrow(() =>
     ensureTokenHasScopes(
-      { scope: "widgets:read", scp: ["widgets:write"] },
-      ["widgets:read", "widgets:write", "widgets:write"],
-      createRequest(),
-      "acme",
-      "public-server"
-    )
+        { scope: "widgets:read", scp: ["widgets:write"] },
+        ["widgets:read", "widgets:write", "widgets:write"],
+        createRequest(),
+        "public-server"
+      )
+  );
+});
+
+test("ensureTokenHasScopes is a no-op when no scopes are required", () => {
+  assert.doesNotThrow(() =>
+    ensureTokenHasScopes(
+        { scope: "widgets:read" },
+        ["", "   "],
+        createRequest(),
+        "public-server"
+      )
   );
 });
 
@@ -83,7 +94,6 @@ test("ensureTokenHasScopes throws insufficient_scope with a challenge", () => {
         { scope: "widgets:read" },
         ["widgets:write", "widgets:write"],
         createRequest(),
-        "acme",
         "public-server"
       ),
     (error: unknown) => {
@@ -101,7 +111,6 @@ test("ensureTokenHasScopes throws insufficient_scope with a challenge", () => {
 test("validateRuntimeAccessToken returns null for public runtimes", async () => {
   const result = await validateRuntimeAccessToken(
     createRequest(),
-    "acme",
     "public-server",
     null,
     { accessMode: "public", audience: null }
@@ -114,7 +123,6 @@ test("validateRuntimeAccessToken rejects protected runtimes without auth configu
   await assert.rejects(
     validateRuntimeAccessToken(
       createRequest("Bearer token"),
-      "acme",
       "protected-server",
       null,
       { accessMode: "protected", audience: "urn:test" }
@@ -132,7 +140,6 @@ test("validateRuntimeAccessToken rejects missing bearer tokens", async () => {
   await assert.rejects(
     validateRuntimeAccessToken(
       createRequest(),
-      "acme",
       "protected-server",
       {
         issuer: "https://issuer.example.com",
@@ -155,7 +162,6 @@ test("validateRuntimeAccessToken maps invalid tokens to AppError", async () => {
   await assert.rejects(
     validateRuntimeAccessToken(
       createRequest("Bearer definitely-not-a-jwt"),
-      "acme",
       "protected-server",
       {
         issuer: "https://issuer.example.com",

@@ -7,7 +7,6 @@ import { maybeAutoPublishDraft } from "../config/auto-publish.js";
 type AuthServerConfigInput = {
   issuer: string;
   jwksUri: string;
-  authorizationServerMetadataUrl?: string | undefined;
 };
 
 export const securityService = {

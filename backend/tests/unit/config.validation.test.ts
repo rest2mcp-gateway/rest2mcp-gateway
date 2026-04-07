@@ -139,8 +139,7 @@ test("validateDraftContext reports protected servers without audience", () => {
     id: "auth-1",
     organizationId: "org-1",
     issuer: "https://issuer.example.com",
-    jwksUri: "https://issuer.example.com/jwks.json",
-    authorizationServerMetadataUrl: null
+    jwksUri: "https://issuer.example.com/jwks.json"
   };
   context.mcpServers[0] = {
     ...context.mcpServers[0],

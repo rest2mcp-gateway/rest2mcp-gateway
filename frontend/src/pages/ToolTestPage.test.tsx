@@ -6,6 +6,16 @@ import { setStoredSession } from "@/lib/auth";
 import { buildStoredSession } from "@/test/fixtures";
 import { renderWithProviders } from "@/test/render";
 
+const navigateMock = vi.fn();
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
+  return {
+    ...actual,
+    useNavigate: () => navigateMock
+  };
+});
+
 vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
@@ -26,7 +36,69 @@ const buildPaginated = <T,>(items: T[]) => ({
 });
 
 describe("ToolTestPage", () => {
+  it("navigates back to the tool detail page", async () => {
+    navigateMock.mockReset();
+    setStoredSession(buildStoredSession());
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/tools/tool-1")) {
+        return Response.json({
+          data: {
+            id: "tool-1",
+            mcpServerId: "server-1",
+            name: "getpost",
+            slug: "getpost",
+            title: "Get post",
+            description: null,
+            inputSchema: null,
+            outputSchema: null,
+            examples: null,
+            riskLevel: "low",
+            scopeIds: [],
+            mapping: null,
+            isActive: true
+          }
+        });
+      }
+      if (url.includes("/mcp-servers")) {
+        return Response.json(buildPaginated([
+          {
+            id: "server-1",
+            organizationId: "org-1",
+            name: "Posts Server",
+            slug: "posts-server",
+            version: "1.0.0",
+            title: "Posts Server",
+            description: null,
+            authMode: "local",
+            accessMode: "public",
+            audience: null,
+            isActive: true
+          }
+        ]));
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/mcp-servers/:serverId/tools/:toolId/test" element={<ToolTestPage />} />
+      </Routes>,
+      {
+        route: "/mcp-servers/server-1/tools/tool-1/test"
+      }
+    );
+
+    expect(await screen.findByRole("button", { name: "Back" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(navigateMock).toHaveBeenCalledWith("/mcp-servers/server-1/tools/tool-1");
+  });
+
   it("prefills the request body from the tool schema and renders runtime responses", async () => {
+    navigateMock.mockReset();
     setStoredSession(buildStoredSession());
 
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
@@ -73,16 +145,7 @@ describe("ToolTestPage", () => {
           }
         ]));
       }
-      if (url.includes("/organizations")) {
-        return Response.json(buildPaginated([
-          {
-            id: "org-1",
-            name: "Default Org",
-            slug: "default"
-          }
-        ]));
-      }
-      if (url === "http://localhost:3000/mcp/default/posts-server") {
+      if (url === "http://localhost:3000/mcp/posts-server") {
         return new Response(
           [
             "event: message",
@@ -124,6 +187,7 @@ describe("ToolTestPage", () => {
   });
 
   it("shows JSON parse errors in the response field", async () => {
+    navigateMock.mockReset();
     setStoredSession(buildStoredSession());
 
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
@@ -164,16 +228,6 @@ describe("ToolTestPage", () => {
           }
         ]));
       }
-      if (url.includes("/organizations")) {
-        return Response.json(buildPaginated([
-          {
-            id: "org-1",
-            name: "Default Org",
-            slug: "default"
-          }
-        ]));
-      }
-
       throw new Error(`Unexpected request: ${url}`);
     });
     vi.stubGlobal("fetch", fetchMock);

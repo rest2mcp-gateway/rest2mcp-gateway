@@ -9,40 +9,40 @@ import {
 } from "./auth.js";
 
 const runtimeParamsSchema = z.object({
-  organizationSlug: z.string().min(1),
   serverSlug: z.string().min(1)
 });
 
-export const runtimeRoutes: FastifyPluginAsync = async (app) => {
-  app.get("/.well-known/oauth-protected-resource/:organizationSlug/:serverSlug", {
+export const runtimeMetadataRoutes: FastifyPluginAsync = async (app) => {
+  app.get("/.well-known/oauth-protected-resource/mcp/:serverSlug", {
     schema: {
       tags: ["mcp-runtime"],
       params: runtimeParamsSchema
     }
   }, async (request) => {
     const params = runtimeParamsSchema.parse(request.params);
-    const runtimeServer = await runtimeService.getServer(app, params.organizationSlug, params.serverSlug);
+    const runtimeServer = await runtimeService.getServer(app, params.serverSlug);
 
     if (runtimeServer.server.accessMode !== "protected" || !runtimeServer.authServerConfig) {
       return {
-        resource: new URL(`/mcp/${params.organizationSlug}/${params.serverSlug}`, `${request.protocol}://${request.headers.host}`).href,
+        resource: new URL(`/mcp/${params.serverSlug}`, `${request.protocol}://${request.headers.host}`).href,
         authorization_servers: []
       };
     }
 
-      return buildProtectedResourceMetadata(
+    return buildProtectedResourceMetadata(
       request,
-      params.organizationSlug,
       params.serverSlug,
       runtimeServer.authServerConfig,
       runtimeServer.server.title,
       runtimeServer.requiredScopes
     );
   });
+};
 
+export const runtimeRoutes: FastifyPluginAsync = async (app) => {
   app.route({
     method: ["GET", "POST", "DELETE"],
-    url: "/:organizationSlug/:serverSlug",
+    url: "/:serverSlug",
     schema: {
       tags: ["mcp-runtime"],
       params: runtimeParamsSchema
@@ -51,10 +51,9 @@ export const runtimeRoutes: FastifyPluginAsync = async (app) => {
       const params = runtimeParamsSchema.parse(request.params);
 
       try {
-        const runtimeServer = await runtimeService.getServer(app, params.organizationSlug, params.serverSlug);
+        const runtimeServer = await runtimeService.getServer(app, params.serverSlug);
         const authPayload = await validateRuntimeAccessToken(
           request,
-          params.organizationSlug,
           params.serverSlug,
           runtimeServer.authServerConfig,
           {
@@ -84,7 +83,6 @@ export const runtimeRoutes: FastifyPluginAsync = async (app) => {
                 authPayload,
                 runtimeTool.requiredScopes,
                 request,
-                params.organizationSlug,
                 params.serverSlug
               );
             }

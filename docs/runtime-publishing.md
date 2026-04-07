@@ -61,7 +61,7 @@ Each publish increments the snapshot version for the organization. Publish event
 
 Published MCP runtime behavior is served under:
 
-`/mcp/:organizationSlug/:serverSlug`
+`/mcp/:serverSlug`
 
 The runtime supports JSON-RPC over HTTP and handles methods such as:
 

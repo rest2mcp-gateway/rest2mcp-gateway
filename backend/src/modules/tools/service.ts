@@ -308,7 +308,9 @@ export const toolService = {
       isActive: values.isActive
     });
 
-    await app.db.update(tools).set(updateValues).where(eq(tools.id, existing.id));
+    if (Object.keys(updateValues).length > 0) {
+      await app.db.update(tools).set(updateValues).where(eq(tools.id, existing.id));
+    }
 
     if (values.scopeIds) {
       await replaceToolScopes(app, existing.id, values.scopeIds);

@@ -15,7 +15,6 @@ type SnapshotAuthServerConfig = {
   organizationId: string;
   issuer: string;
   jwksUri: string;
-  authorizationServerMetadataUrl?: string | null;
 };
 
 export type SnapshotBackendApi = {
@@ -357,6 +356,111 @@ export const createContentBlocks = (value: unknown) => {
   return [{ type: "text", text: JSON.stringify(value, null, 2) }];
 };
 
+export const createStructuredContent = (value: unknown): JsonObject | undefined => {
+  if (Array.isArray(value)) {
+    return { items: value };
+  }
+
+  if (value && typeof value === "object") {
+    return value as JsonObject;
+  }
+
+  return undefined;
+};
+
+const backendErrorFallbackByStatus: Record<number, { error: string; message: string }> = {
+  400: {
+    error: "backend_bad_request",
+    message: "Backend returned 400 Bad Request"
+  },
+  401: {
+    error: "backend_unauthorized",
+    message: "Backend returned 401 Unauthorized"
+  },
+  403: {
+    error: "backend_forbidden",
+    message: "Backend returned 403 Forbidden"
+  },
+  404: {
+    error: "backend_not_found",
+    message: "Backend returned 404 Not Found"
+  },
+  409: {
+    error: "backend_conflict",
+    message: "Backend returned 409 Conflict"
+  },
+  422: {
+    error: "backend_validation_error",
+    message: "Backend returned 422 Unprocessable Content"
+  },
+  429: {
+    error: "backend_rate_limited",
+    message: "Backend returned 429 Too Many Requests"
+  },
+  500: {
+    error: "backend_internal_error",
+    message: "Backend returned 500 Internal Server Error"
+  },
+  502: {
+    error: "backend_unavailable",
+    message: "Backend returned 502 Bad Gateway"
+  },
+  503: {
+    error: "backend_unavailable",
+    message: "Backend returned 503 Service Unavailable"
+  },
+  504: {
+    error: "backend_unavailable",
+    message: "Backend returned 504 Gateway Timeout"
+  }
+};
+
+export const normalizeBackendErrorResponse = (status: number, output: unknown): JsonObject => {
+  const fallback = backendErrorFallbackByStatus[status] ?? {
+    error: "backend_request_failed",
+    message: `Backend returned ${status}`
+  };
+
+  if (output && typeof output === "object" && !Array.isArray(output)) {
+    const objectOutput = output as JsonObject;
+    return {
+      ...objectOutput,
+      status: typeof objectOutput.status === "number" ? objectOutput.status : status,
+      error:
+        typeof objectOutput.error === "string" && objectOutput.error.trim().length > 0
+          ? objectOutput.error
+          : fallback.error,
+      message:
+        typeof objectOutput.message === "string" && objectOutput.message.trim().length > 0
+          ? objectOutput.message
+          : fallback.message
+    };
+  }
+
+  if (typeof output === "string" && output.trim().length > 0) {
+    return {
+      status,
+      error: fallback.error,
+      message: output
+    };
+  }
+
+  if (Array.isArray(output) && output.length > 0) {
+    return {
+      status,
+      error: fallback.error,
+      message: fallback.message,
+      details: output
+    };
+  }
+
+  return {
+    status,
+    error: fallback.error,
+    message: fallback.message
+  };
+};
+
 export const redactUrlForLog = (url: URL, backendApi: SnapshotBackendApi) => {
   const authConfig = asObject(backendApi.authConfig);
   if (backendApi.authType !== "api_key" || authConfig.in !== "query" || typeof authConfig.name !== "string") {
@@ -494,6 +598,32 @@ const getCompiledOrganizationRuntime = async (
   return compiled;
 };
 
+const getCompiledRuntimeServer = async (
+  app: FastifyInstance,
+  serverSlug: string
+) => {
+  const organizations = await runtimeRepository.listOrganizationsWithPublishedSnapshots(app);
+  const matches: CompiledRuntimeServer[] = [];
+
+  for (const organization of organizations) {
+    const compiled = await getCompiledOrganizationRuntime(app, organization.slug);
+    const server = compiled.serversBySlug.get(serverSlug);
+    if (server) {
+      matches.push(server);
+    }
+  }
+
+  if (matches.length === 0) {
+    throw new AppError(404, "MCP server not found", "mcp_runtime_server_not_found");
+  }
+
+  if (matches.length > 1) {
+    throw new AppError(409, `MCP server slug '${serverSlug}' is ambiguous across organizations`, "mcp_runtime_server_slug_ambiguous");
+  }
+
+  return matches[0]!;
+};
+
 const callBackend = async (
   app: FastifyInstance,
   server: CompiledRuntimeServer,
@@ -582,16 +712,17 @@ const callBackend = async (
       });
 
       if (!response.ok) {
+        const normalizedError = normalizeBackendErrorResponse(response.status, output);
         return {
-          content: createContentBlocks(output),
-          structuredContent: typeof output === "object" && output !== null ? output : undefined,
+          content: createContentBlocks(normalizedError),
+          structuredContent: createStructuredContent(normalizedError),
           isError: true as const
         };
       }
 
       return {
         content: createContentBlocks(output),
-        structuredContent: output,
+        structuredContent: createStructuredContent(output),
         isError: false as const
       };
     } catch (error) {
@@ -647,17 +778,10 @@ const callBackend = async (
 };
 
 export const runtimeService = {
-  async getServer(app: FastifyInstance, organizationSlug: string, serverSlug: string) {
-    const compiled = await getCompiledOrganizationRuntime(app, organizationSlug);
-    const server = compiled.serversBySlug.get(serverSlug);
-    if (!server) {
-      throw new AppError(404, "MCP server not found", "mcp_runtime_server_not_found");
-    }
-    return server;
-  },
+  getServer: getCompiledRuntimeServer,
 
-  async initialize(app: FastifyInstance, organizationSlug: string, serverSlug: string) {
-    const runtimeServer = await this.getServer(app, organizationSlug, serverSlug);
+  async initialize(app: FastifyInstance, serverSlug: string) {
+    const runtimeServer = await this.getServer(app, serverSlug);
     return {
       protocolVersion: MCP_PROTOCOL_VERSION,
       capabilities: {
@@ -673,8 +797,8 @@ export const runtimeService = {
     };
   },
 
-  async listTools(app: FastifyInstance, organizationSlug: string, serverSlug: string) {
-    const runtimeServer = await this.getServer(app, organizationSlug, serverSlug);
+  async listTools(app: FastifyInstance, serverSlug: string) {
+    const runtimeServer = await this.getServer(app, serverSlug);
     return {
       tools: runtimeServer.tools.map(({ tool }) => ({
         name: tool.name,
@@ -692,12 +816,11 @@ export const runtimeService = {
 
   async callTool(
     app: FastifyInstance,
-    organizationSlug: string,
     serverSlug: string,
     toolName: string,
     rawArguments: unknown
   ) {
-    const runtimeServer = await this.getServer(app, organizationSlug, serverSlug);
+    const runtimeServer = await this.getServer(app, serverSlug);
     const runtimeTool = runtimeServer.toolsByName.get(toolName);
     if (!runtimeTool) {
       throw new AppError(404, `Tool ${toolName} not found`, "tool_not_found");
@@ -729,13 +852,12 @@ export const runtimeService = {
     );
 
     server.setRequestHandler(ListToolsRequestSchema, async () =>
-      this.listTools(app, runtimeServer.organizationSlug, runtimeServer.server.slug)
+      this.listTools(app, runtimeServer.server.slug)
     );
 
     server.setRequestHandler(CallToolRequestSchema, async (request) =>
       this.callTool(
         app,
-        runtimeServer.organizationSlug,
         runtimeServer.server.slug,
         request.params.name,
         request.params.arguments

@@ -6,7 +6,6 @@ import { AppError } from "../../lib/errors.js";
 type AuthServerConfig = {
   issuer: string;
   jwksUri: string;
-  authorizationServerMetadataUrl?: string | null;
 };
 
 type RuntimeServerAuthConfig = {
@@ -33,21 +32,21 @@ export const getBearerToken = (authorizationHeader?: string) => {
   }
 
   const match = authorizationHeader.match(/^Bearer\s+(.+)$/i);
-  return match?.[1] ?? null;
+  const token = match?.[1]?.trim();
+  return token ? token : null;
 };
 
-export const getProtectedResourceMetadataUrl = (request: FastifyRequest, organizationSlug: string, serverSlug: string) =>
-  getOAuthProtectedResourceMetadataUrl(new URL(`/mcp/${organizationSlug}/${serverSlug}`, `${request.protocol}://${request.headers.host}`));
+export const getProtectedResourceMetadataUrl = (request: FastifyRequest, serverSlug: string) =>
+  getOAuthProtectedResourceMetadataUrl(new URL(`/mcp/${serverSlug}`, `${request.protocol}://${request.headers.host}`));
 
 export const buildProtectedResourceMetadata = (
   request: FastifyRequest,
-  organizationSlug: string,
   serverSlug: string,
   authServerConfig: AuthServerConfig,
   resourceName: string,
   scopesSupported: string[] = []
 ) => ({
-  resource: new URL(`/mcp/${organizationSlug}/${serverSlug}`, `${request.protocol}://${request.headers.host}`).href,
+  resource: new URL(`/mcp/${serverSlug}`, `${request.protocol}://${request.headers.host}`).href,
   authorization_servers: [authServerConfig.issuer],
   resource_name: resourceName,
   scopes_supported: scopesSupported
@@ -55,9 +54,8 @@ export const buildProtectedResourceMetadata = (
 
 export const buildUnauthorizedChallenge = (
   request: FastifyRequest,
-  organizationSlug: string,
   serverSlug: string
-) => `Bearer resource_metadata="${getProtectedResourceMetadataUrl(request, organizationSlug, serverSlug)}"`;
+) => `Bearer resource_metadata="${getProtectedResourceMetadataUrl(request, serverSlug)}"`;
 
 export const parseTokenScopes = (value: unknown) => {
   if (typeof value === "string") {
@@ -75,7 +73,6 @@ export const ensureTokenHasScopes = (
   tokenPayload: unknown,
   requiredScopes: string[],
   request: FastifyRequest,
-  organizationSlug: string,
   serverSlug: string
 ) => {
   const normalizedRequiredScopes = Array.from(new Set(requiredScopes.filter((scope) => scope.trim().length > 0)));
@@ -98,13 +95,12 @@ export const ensureTokenHasScopes = (
   }
 
   throw new AppError(403, `Missing required scopes: ${missingScopes.join(", ")}`, "runtime_auth_insufficient_scope", {
-    wwwAuthenticate: `${buildUnauthorizedChallenge(request, organizationSlug, serverSlug)}, error="insufficient_scope", scope="${normalizedRequiredScopes.join(" ")}"`
+    wwwAuthenticate: `${buildUnauthorizedChallenge(request, serverSlug)}, error="insufficient_scope", scope="${normalizedRequiredScopes.join(" ")}"`
   });
 };
 
 export const validateRuntimeAccessToken = async (
   request: FastifyRequest,
-  organizationSlug: string,
   serverSlug: string,
   authServerConfig: AuthServerConfig | null,
   runtimeServer: RuntimeServerAuthConfig
@@ -120,7 +116,7 @@ export const validateRuntimeAccessToken = async (
   const token = getBearerToken(request.headers.authorization);
   if (!token) {
     throw new AppError(401, "Missing bearer token", "runtime_auth_missing_token", {
-      wwwAuthenticate: buildUnauthorizedChallenge(request, organizationSlug, serverSlug)
+      wwwAuthenticate: buildUnauthorizedChallenge(request, serverSlug)
     });
   }
 
@@ -133,7 +129,7 @@ export const validateRuntimeAccessToken = async (
     return result.payload;
   } catch (error) {
     throw new AppError(401, error instanceof Error ? error.message : "Invalid access token", "runtime_auth_invalid_token", {
-      wwwAuthenticate: buildUnauthorizedChallenge(request, organizationSlug, serverSlug)
+      wwwAuthenticate: buildUnauthorizedChallenge(request, serverSlug)
     });
   }
 };

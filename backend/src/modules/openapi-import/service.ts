@@ -452,6 +452,27 @@ const ensureUniqueIdentifiers = async (
   });
 };
 
+const ensureUniqueOperationIds = (operations: OperationPreview[]) => {
+  const usedOperationIds = new Set<string>();
+
+  return operations.map((operation) => {
+    let nextOperationId = operation.operationId;
+    let counter = 2;
+
+    while (usedOperationIds.has(nextOperationId)) {
+      nextOperationId = `${operation.operationId}_${counter}`;
+      counter += 1;
+    }
+
+    usedOperationIds.add(nextOperationId);
+
+    return {
+      ...operation,
+      operationId: nextOperationId
+    };
+  });
+};
+
 export const openApiImportService = {
   preview(input: PreviewInput) {
     return buildPreview(input);
@@ -460,8 +481,9 @@ export const openApiImportService = {
   async execute(app: FastifyInstance, actorId: string, organizationId: string, input: ImportInput) {
     const preview = buildPreview(input);
     const operationSelection = new Map(input.operations.map((operation) => [operation.operationKey, operation.exposeAsTool]));
+    const normalizedOperations = ensureUniqueOperationIds(preview.operations);
 
-    const selectedOperations = preview.operations.filter((operation) => operationSelection.get(operation.operationKey));
+    const selectedOperations = normalizedOperations.filter((operation) => operationSelection.get(operation.operationKey));
     if (selectedOperations.some((operation) => !operation.exposable)) {
       throw new AppError(400, "One or more selected operations cannot be exposed as tools yet", "openapi_unsupported_tool_exposure");
     }
@@ -488,7 +510,7 @@ export const openApiImportService = {
     });
 
     const resourcesByOperationKey = new Map<string, { id: string }>();
-    for (const operation of preview.operations) {
+    for (const operation of normalizedOperations) {
       const resource = await backendResourceService.create(app, actorId, organizationId, {
         backendApiId: backendApi.id,
         name: operation.summary,
@@ -542,9 +564,9 @@ export const openApiImportService = {
 
     return {
       backendApi,
-      importedResourceCount: preview.operations.length,
+      importedResourceCount: normalizedOperations.length,
       importedToolCount: createdTools.length,
-      operations: preview.operations.map((operation) => ({
+      operations: normalizedOperations.map((operation) => ({
         operationKey: operation.operationKey,
         importedAsTool: Boolean(operationSelection.get(operation.operationKey))
       }))

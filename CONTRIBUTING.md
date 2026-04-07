@@ -45,6 +45,16 @@ The local `pre-push` hook intentionally skips backend integration tests because 
 
 For release preparation, use the checklist in [`docs/release-checklist.md`](docs/release-checklist.md).
 
+## Project Guidance
+
+This repository keeps project guidance tool-neutral:
+
+- repository expectations in [`AGENTS.md`](AGENTS.md)
+- structural coding guidance in [`docs/architecture-guide.md`](docs/architecture-guide.md)
+- review guidance in [`docs/review-checklist.md`](docs/review-checklist.md)
+
+If you use an AI coding tool locally, keep harness-specific workflow files outside this repository and use the project guidance here as the source of truth for build, architecture, review, and release expectations.
+
 ## Current Enforcement Policy
 
 - Do not relax TypeScript strictness to make builds pass unless the change is explicitly reviewed.

@@ -26,7 +26,7 @@ describe("api-client runtime handling", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await mcpRuntimeApi.call("org-slug", "server-slug", {
+    const result = await mcpRuntimeApi.call("server-slug", {
       jsonrpc: "2.0",
       id: 1,
       method: "initialize"
@@ -38,7 +38,7 @@ describe("api-client runtime handling", () => {
       result: { ok: true }
     });
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:3000/mcp/org-slug/server-slug",
+      "http://localhost:3000/mcp/server-slug",
       expect.objectContaining({
         headers: expect.objectContaining({
           Accept: "application/json, text/event-stream",
@@ -66,7 +66,7 @@ describe("api-client runtime handling", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await mcpRuntimeApi.call("org-slug", "server-slug", {
+    const result = await mcpRuntimeApi.call("server-slug", {
       jsonrpc: "2.0",
       id: 3,
       method: "tools/call",

@@ -56,7 +56,6 @@ export const createStubAuthServer = async () => {
   return {
     issuer: baseUrl,
     jwksUri: `${baseUrl}/.well-known/jwks.json`,
-    authorizationServerMetadataUrl: `${baseUrl}/.well-known/oauth-authorization-server`,
     async issueToken(options: TokenOptions = {}) {
       const now = Math.floor(Date.now() / 1000);
       const jwt = new SignJWT({

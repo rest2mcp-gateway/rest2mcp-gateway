@@ -30,7 +30,7 @@ import { configRoutes } from "./modules/config/route.js";
 import { auditRoutes } from "./modules/audit/route.js";
 import { executionLogRoutes } from "./modules/execution-logs/route.js";
 import { frontendRoutes } from "./modules/frontend/route.js";
-import { runtimeRoutes } from "./modules/runtime/route.js";
+import { runtimeMetadataRoutes, runtimeRoutes } from "./modules/runtime/route.js";
 import { openApiImportRoutes } from "./modules/openapi-import/route.js";
 import { securityRoutes } from "./modules/security/route.js";
 
@@ -100,6 +100,7 @@ export const buildApp = async () => {
     await adminApp.register(executionLogRoutes, { prefix: "/execution-logs" });
   }, { prefix: "/api/admin/v1" });
 
+  await app.register(runtimeMetadataRoutes);
   await app.register(runtimeRoutes, { prefix: "/mcp" });
   await app.register(frontendRoutes);
 

@@ -15,6 +15,8 @@ type StubResponse = {
   status?: number;
   headers?: Record<string, string>;
   body?: string | Record<string, unknown> | unknown[];
+  delayMs?: number;
+  disconnect?: boolean;
 };
 
 type StubHandler = (request: StubRequest) => StubResponse | Promise<StubResponse>;
@@ -73,6 +75,16 @@ export const createStubBackend = async () => {
     }
 
     const response = await handler(recordedRequest);
+
+    if (response.delayMs && response.delayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, response.delayMs));
+    }
+
+    if (response.disconnect) {
+      req.socket.destroy();
+      return;
+    }
+
     const status = response.status ?? 200;
     const body = response.body ?? {};
     const isJsonBody = typeof body !== "string";

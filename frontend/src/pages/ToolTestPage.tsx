@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, FlaskConical } from "lucide-react";
 import { toast } from "sonner";
-import { getMcpRuntimeUrl, mcpRuntimeApi, mcpServersApi, organizationsApi, toolsApi } from "@/services/api-client";
+import { getMcpRuntimeUrl, mcpRuntimeApi, mcpServersApi, toolsApi } from "@/services/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -49,6 +49,7 @@ const buildDefaultArguments = (inputSchema: Record<string, unknown> | null | und
 export default function ToolTestPage() {
   const { serverId, toolId } = useParams<{ serverId: string; toolId: string }>();
   const navigate = useNavigate();
+  const toolDetailPath = `/mcp-servers/${serverId}/tools/${toolId}`;
 
   const toolQuery = useQuery({
     queryKey: ["tool", toolId],
@@ -62,14 +63,8 @@ export default function ToolTestPage() {
     enabled: !!serverId
   });
 
-  const organizationsQuery = useQuery({
-    queryKey: ["organizations", "all"],
-    queryFn: () => organizationsApi.listAll()
-  });
-
   const tool = toolQuery.data;
   const server = serverQuery.data;
-  const organizationSlug = organizationsQuery.data?.find((organization) => organization.id === server?.organizationId)?.slug;
 
   const initialRequestBody = useMemo(() => {
     if (!tool) {
@@ -99,11 +94,11 @@ export default function ToolTestPage() {
 
   const callMutation = useMutation({
     mutationFn: async () => {
-      if (!organizationSlug || !server) {
-        throw new Error("Organization slug or server is not available");
+      if (!server) {
+        throw new Error("Server is not available");
       }
       const payload = JSON.parse(requestBody) as unknown;
-      const response = await mcpRuntimeApi.call<unknown>(organizationSlug, server.slug, payload, bearerToken || undefined);
+      const response = await mcpRuntimeApi.call<unknown>(server.slug, payload, bearerToken || undefined);
       setResponseBody(prettyJson(response));
       return response;
     },
@@ -114,20 +109,19 @@ export default function ToolTestPage() {
     }
   });
 
-  const anyLoading = toolQuery.isLoading || serverQuery.isLoading || organizationsQuery.isLoading;
-  const anyError = toolQuery.isError || serverQuery.isError || organizationsQuery.isError;
-  const firstError = [toolQuery, serverQuery, organizationsQuery].find((query) => query.isError)?.error;
+  const anyLoading = toolQuery.isLoading || serverQuery.isLoading;
+  const anyError = toolQuery.isError || serverQuery.isError;
+  const firstError = [toolQuery, serverQuery].find((query) => query.isError)?.error;
 
   if (anyError) {
     return (
       <div className="p-6 max-w-5xl animate-fade-in">
-        <Button variant="ghost" size="sm" onClick={() => navigate(`/mcp-servers/${serverId}`)} className="mb-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate(toolDetailPath)} className="mb-4">
           <ArrowLeft className="w-4 h-4 mr-1" /> Back
         </Button>
         <ErrorState message={firstError instanceof Error ? firstError.message : "Failed to load tool test data"} onRetry={() => {
           toolQuery.refetch();
           serverQuery.refetch();
-          organizationsQuery.refetch();
         }} />
       </div>
     );
@@ -136,7 +130,7 @@ export default function ToolTestPage() {
   if (anyLoading) {
     return (
       <div className="p-6 max-w-5xl animate-fade-in">
-        <Button variant="ghost" size="sm" onClick={() => navigate(`/mcp-servers/${serverId}`)} className="mb-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate(toolDetailPath)} className="mb-4">
           <ArrowLeft className="w-4 h-4 mr-1" /> Back
         </Button>
         <LoadingState rows={4} />
@@ -146,7 +140,7 @@ export default function ToolTestPage() {
 
   return (
     <div className="p-6 max-w-5xl animate-fade-in">
-      <Button variant="ghost" size="sm" onClick={() => navigate(`/mcp-servers/${serverId}`)} className="mb-4">
+      <Button variant="ghost" size="sm" onClick={() => navigate(toolDetailPath)} className="mb-4">
         <ArrowLeft className="w-4 h-4 mr-1" /> Back
       </Button>
 
@@ -154,7 +148,7 @@ export default function ToolTestPage() {
         title={`Test ${tool?.name ?? "Tool"}`}
         description="Call the MCP runtime for this tool using an editable pre-filled request body."
         actions={
-          <Button onClick={() => callMutation.mutate()} disabled={callMutation.isPending || !organizationSlug}>
+          <Button onClick={() => callMutation.mutate()} disabled={callMutation.isPending || !server}>
             {callMutation.isPending ? "Running..." : "Run Tool Test"}
           </Button>
         }
@@ -167,7 +161,7 @@ export default function ToolTestPage() {
               <FlaskConical className="w-4 h-4" /> Runtime Endpoint
             </div>
             <p className="mt-1 font-mono text-xs text-muted-foreground">
-              {organizationSlug && server ? getMcpRuntimeUrl(organizationSlug, server.slug) : "Resolving organization slug..."}
+              {server ? getMcpRuntimeUrl(server.slug) : "Resolving server..."}
             </p>
           </div>
 

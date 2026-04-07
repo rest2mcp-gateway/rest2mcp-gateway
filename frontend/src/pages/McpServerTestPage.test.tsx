@@ -48,17 +48,21 @@ describe("McpServerTestPage", () => {
           }
         ]));
       }
-      if (url.includes("/organizations")) {
-        return Response.json(buildPaginated([
-          {
-            id: "org-1",
-            name: "Default Org",
-            slug: "default"
-          }
-        ]));
-      }
-      if (url === "http://localhost:3000/mcp/default/posts-server") {
+      if (url === "http://localhost:3000/mcp/posts-server") {
         expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer runtime-token");
+        expect(init?.body).toBe(JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "initialize",
+          params: {
+            protocolVersion: "2024-11-05",
+            capabilities: {},
+            clientInfo: {
+              name: "rest-to-mcp-gateway-ui",
+              version: "0.1.0"
+            }
+          }
+        }));
         return new Response(JSON.stringify({
           jsonrpc: "2.0",
           id: 1,
@@ -86,7 +90,16 @@ describe("McpServerTestPage", () => {
       }
     );
 
-    expect(await screen.findByDisplayValue("http://localhost:3000/mcp/default/posts-server")).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("http://localhost:3000/mcp/posts-server")).toBeInTheDocument();
+    expect(
+      screen.getByDisplayValue(/"method": "initialize"/)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByDisplayValue(/"protocolVersion": "2024-11-05"/)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByDisplayValue(/"method": "tools\/list"/)
+    ).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/Bearer Token/i), {
       target: { value: "runtime-token" }

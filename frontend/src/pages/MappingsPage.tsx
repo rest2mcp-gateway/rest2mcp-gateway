@@ -1,10 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { toolMappingsApi, toolsApi, backendApisApi, resourcesApi } from "@/services/api-client";
 import { GitBranch, ArrowRight, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader, EmptyState, MethodBadge, StatusBadge, ErrorState, LoadingState, PaginationControls } from "@/components/shared";
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import type { BackendResource } from "@/contracts/admin-api";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -23,25 +23,28 @@ export default function MappingsPage() {
   const pagination = mappingsQuery.data?.pagination;
   const allTools = toolsQuery.data ?? EMPTY_TOOLS;
   const apis = apisQuery.data ?? EMPTY_APIS;
+  const resourcesQueries = useQueries({
+    queries: apis.map((api) => ({
+      queryKey: ["resources", "all", api.id],
+      queryFn: () => resourcesApi.listAll(api.id),
+      staleTime: 30_000
+    }))
+  });
+
+  const resourcesMap = useMemo<Record<string, BackendResource>>(() => (
+    resourcesQueries.reduce<Record<string, BackendResource>>((acc, query) => {
+      for (const resource of query.data ?? []) {
+        acc[resource.id] = resource;
+      }
+      return acc;
+    }, {})
+  ), [resourcesQueries]);
 
   const anyError = mappingsQuery.isError || toolsQuery.isError || apisQuery.isError;
   const firstError = [mappingsQuery, toolsQuery, apisQuery].find((q) => q.isError)?.error;
-  const anyLoading = mappingsQuery.isLoading || toolsQuery.isLoading || apisQuery.isLoading;
-
-  const [resourcesMap, setResourcesMap] = useState<Record<string, BackendResource>>({});
-  useEffect(() => {
-    apis.forEach((api) => {
-      resourcesApi.listAll(api.id).then((res) => {
-        setResourcesMap((prev) => {
-          const next = { ...prev };
-          res.forEach((resource) => {
-            next[resource.id] = resource;
-          });
-          return next;
-        });
-      }).catch(() => {});
-    });
-  }, [apis]);
+  const resourcesError = resourcesQueries.find((query) => query.isError)?.error;
+  const anyLoading = mappingsQuery.isLoading || toolsQuery.isLoading || apisQuery.isLoading || resourcesQueries.some((query) => query.isLoading);
+  const combinedError = firstError ?? resourcesError;
 
   const getToolName = (id: string) => allTools.find((tool) => tool.id === id)?.name || id;
   const getApiName = (id: string) => apis.find((api) => api.id === id)?.name || id;
@@ -55,8 +58,18 @@ export default function MappingsPage() {
         actions={<Button onClick={() => navigate("/mappings/new")}><Plus className="w-4 h-4 mr-1" /> Add Mapping</Button>}
       />
 
-      {anyError ? (
-        <ErrorState message={firstError instanceof Error ? firstError.message : "Failed to load mappings data."} onRetry={() => { mappingsQuery.refetch(); toolsQuery.refetch(); apisQuery.refetch(); }} />
+      {anyError || resourcesError ? (
+        <ErrorState
+          message={combinedError instanceof Error ? combinedError.message : "Failed to load mappings data."}
+          onRetry={() => {
+            mappingsQuery.refetch();
+            toolsQuery.refetch();
+            apisQuery.refetch();
+            resourcesQueries.forEach((query) => {
+              void query.refetch();
+            });
+          }}
+        />
       ) : anyLoading ? (
         <LoadingState />
       ) : mappings.length === 0 ? (

@@ -2,8 +2,7 @@ import { z } from "zod";
 
 export const authServerConfigSchema = z.object({
   issuer: z.string().url(),
-  jwksUri: z.string().url(),
-  authorizationServerMetadataUrl: z.string().url().optional()
+  jwksUri: z.string().url()
 });
 
 export const authServerConfigResponseSchema = authServerConfigSchema.extend({

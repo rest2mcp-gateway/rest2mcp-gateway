@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Rocket } from "lucide-react";
 import { toast } from "sonner";
-import { getMcpRuntimeUrl, mcpRuntimeApi, mcpServersApi, organizationsApi } from "@/services/api-client";
+import { getMcpRuntimeUrl, mcpRuntimeApi, mcpServersApi } from "@/services/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,13 +11,32 @@ import { Textarea } from "@/components/ui/textarea";
 import { ErrorState, FieldLabel, LoadingState, PageHeader } from "@/components/shared";
 
 const prettyJson = (value: unknown) => JSON.stringify(value, null, 2);
+const initializePayload = {
+  jsonrpc: "2.0",
+  id: 1,
+  method: "initialize",
+  params: {
+    protocolVersion: "2024-11-05",
+    capabilities: {},
+    clientInfo: {
+      name: "rest-to-mcp-gateway-ui",
+      version: "0.1.0"
+    }
+  }
+} as const;
+const listToolsPayload = {
+  jsonrpc: "2.0",
+  id: 2,
+  method: "tools/list",
+  params: {}
+} as const;
 
 export default function McpServerTestPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [lastInitializeRequest, setLastInitializeRequest] = useState("{}");
+  const [lastInitializeRequest, setLastInitializeRequest] = useState(prettyJson(initializePayload));
   const [lastInitializeResponse, setLastInitializeResponse] = useState("");
-  const [lastListToolsRequest, setLastListToolsRequest] = useState("{}");
+  const [lastListToolsRequest, setLastListToolsRequest] = useState(prettyJson(listToolsPayload));
   const [lastListToolsResponse, setLastListToolsResponse] = useState("");
   const [bearerToken, setBearerToken] = useState("");
 
@@ -27,27 +46,16 @@ export default function McpServerTestPage() {
     enabled: !!id
   });
 
-  const organizationsQuery = useQuery({
-    queryKey: ["organizations", "all"],
-    queryFn: () => organizationsApi.listAll()
-  });
-
   const server = serverQuery.data;
-  const organizationSlug = organizationsQuery.data?.find((organization) => organization.id === server?.organizationId)?.slug;
 
   const initializeMutation = useMutation({
     mutationFn: async () => {
-      if (!organizationSlug || !server) {
-        throw new Error("Organization slug or server not available");
+      if (!server) {
+        throw new Error("Server not available");
       }
-      const payload = {
-        jsonrpc: "2.0",
-        id: 1,
-        method: "initialize",
-        params: {}
-      };
+      const payload = initializePayload;
       setLastInitializeRequest(prettyJson(payload));
-      const response = await mcpRuntimeApi.call<unknown>(organizationSlug, server.slug, payload, bearerToken || undefined);
+      const response = await mcpRuntimeApi.call<unknown>(server.slug, payload, bearerToken || undefined);
       setLastInitializeResponse(prettyJson(response));
       return response;
     },
@@ -60,17 +68,12 @@ export default function McpServerTestPage() {
 
   const listToolsMutation = useMutation({
     mutationFn: async () => {
-      if (!organizationSlug || !server) {
-        throw new Error("Organization slug or server not available");
+      if (!server) {
+        throw new Error("Server not available");
       }
-      const payload = {
-        jsonrpc: "2.0",
-        id: 2,
-        method: "tools/list",
-        params: {}
-      };
+      const payload = listToolsPayload;
       setLastListToolsRequest(prettyJson(payload));
-      const response = await mcpRuntimeApi.call<unknown>(organizationSlug, server.slug, payload, bearerToken || undefined);
+      const response = await mcpRuntimeApi.call<unknown>(server.slug, payload, bearerToken || undefined);
       setLastListToolsResponse(prettyJson(response));
       return response;
     },
@@ -81,9 +84,9 @@ export default function McpServerTestPage() {
     }
   });
 
-  const anyLoading = serverQuery.isLoading || organizationsQuery.isLoading;
-  const anyError = serverQuery.isError || organizationsQuery.isError;
-  const firstError = [serverQuery, organizationsQuery].find((query) => query.isError)?.error;
+  const anyLoading = serverQuery.isLoading;
+  const anyError = serverQuery.isError;
+  const firstError = serverQuery.error;
 
   if (anyError) {
     return (
@@ -93,7 +96,6 @@ export default function McpServerTestPage() {
         </Button>
         <ErrorState message={firstError instanceof Error ? firstError.message : "Failed to load MCP server test data"} onRetry={() => {
           serverQuery.refetch();
-          organizationsQuery.refetch();
         }} />
       </div>
     );
@@ -128,7 +130,7 @@ export default function McpServerTestPage() {
           </div>
           <Textarea
             readOnly
-            value={organizationSlug && server ? getMcpRuntimeUrl(organizationSlug, server.slug) : "Resolving organization slug..."}
+            value={server ? getMcpRuntimeUrl(server.slug) : "Resolving server..."}
             className="font-mono text-xs min-h-20"
           />
         </CardContent>
@@ -157,7 +159,7 @@ export default function McpServerTestPage() {
                 <div className="text-sm font-medium text-foreground">Test Initialize</div>
                 <p className="text-xs text-muted-foreground">Sends an MCP `initialize` request to this server.</p>
               </div>
-              <Button size="sm" onClick={() => initializeMutation.mutate()} disabled={initializeMutation.isPending || !organizationSlug}>
+              <Button size="sm" onClick={() => initializeMutation.mutate()} disabled={initializeMutation.isPending || !server}>
                 {initializeMutation.isPending ? "Running..." : "Test Initialize"}
               </Button>
             </div>
@@ -179,7 +181,7 @@ export default function McpServerTestPage() {
                 <div className="text-sm font-medium text-foreground">Test List Tools</div>
                 <p className="text-xs text-muted-foreground">Sends an MCP `tools/list` request to this server.</p>
               </div>
-              <Button size="sm" onClick={() => listToolsMutation.mutate()} disabled={listToolsMutation.isPending || !organizationSlug}>
+              <Button size="sm" onClick={() => listToolsMutation.mutate()} disabled={listToolsMutation.isPending || !server}>
                 {listToolsMutation.isPending ? "Running..." : "Test List Tools"}
               </Button>
             </div>

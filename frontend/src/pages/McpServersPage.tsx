@@ -152,7 +152,10 @@ export default function McpServersPage() {
                     <Button variant="ghost" size="sm" onClick={() => getToolsQuery(server.id)?.refetch()}>Retry</Button>
                   </div>
                 ) : null}
-                <div className="flex justify-end mt-3">
+                <div className="flex justify-end mt-3 gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => navigate(`/mcp-servers/${server.id}/test`)}>
+                    Test MCP
+                  </Button>
                   <Button variant="ghost" size="sm" onClick={() => navigate(`/mcp-servers/${server.id}`)}>Edit</Button>
                 </div>
                 {getTools(server.id).length > 0 && (
@@ -188,6 +191,12 @@ export default function McpServersPage() {
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
+                          <Button variant="ghost" size="sm" onClick={() => navigate(`/mcp-servers/${server.id}/tools/${tool.id}/test`)}>
+                            Test
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => navigate(`/mcp-servers/${server.id}/tools/${tool.id}`)}>
+                            Edit
+                          </Button>
                         </div>
                       </div>
                     ))}

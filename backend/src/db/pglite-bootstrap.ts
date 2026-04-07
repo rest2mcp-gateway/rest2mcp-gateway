@@ -48,10 +48,10 @@ CREATE TABLE IF NOT EXISTS auth_server_configs (
   organization_id uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   issuer text NOT NULL,
   jwks_uri text NOT NULL,
-  authorization_server_metadata_url text,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE auth_server_configs DROP COLUMN IF EXISTS authorization_server_metadata_url;
 CREATE UNIQUE INDEX IF NOT EXISTS auth_server_configs_org_idx ON auth_server_configs (organization_id);
 
 CREATE TABLE IF NOT EXISTS users (

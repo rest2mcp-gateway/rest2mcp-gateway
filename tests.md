@@ -36,7 +36,7 @@ Most tests follow this sequence:
 6. Create the tool mapping through the tool payload so the tool points at the backend resource.
 7. Validate config through `/api/admin/v1/config/validate/:organizationId`.
 8. Publish through `/api/admin/v1/config/publish`.
-9. Exercise the public runtime under `/mcp/...`.
+9. Exercise the public runtime under `/mcp/:serverSlug`.
 
 ### Covered Workflows
 
@@ -49,7 +49,7 @@ Steps:
 1. Build the draft configuration through admin APIs.
 2. Validate and publish the organization config.
 3. Call the public protected-resource metadata endpoint:
-   - `GET /mcp/.well-known/oauth-protected-resource/:organizationSlug/:serverSlug`
+   - `GET /.well-known/oauth-protected-resource/mcp/:serverSlug`
 4. Assert that the published runtime is exposed as a public resource with no authorization servers.
 5. Call the runtime with `initialize`.
 6. Assert that public `initialize` succeeds.
@@ -169,7 +169,7 @@ Steps:
 7. Build the rest of the draft configuration through admin APIs.
 8. Validate and publish the organization config.
 9. Call:
-   - `GET /mcp/.well-known/oauth-protected-resource/:organizationSlug/:serverSlug`
+   - `GET /.well-known/oauth-protected-resource/mcp/:serverSlug`
 10. Assert that protected-resource metadata includes:
    - the authorization server issuer
    - the protected resource name

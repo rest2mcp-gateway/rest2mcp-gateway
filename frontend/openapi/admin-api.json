@@ -5592,10 +5592,6 @@
                           "type": "string",
                           "format": "uri"
                         },
-                        "authorizationServerMetadataUrl": {
-                          "type": "string",
-                          "nullable": true
-                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time"
@@ -5641,10 +5637,6 @@
                   "jwksUri": {
                     "type": "string",
                     "format": "uri"
-                  },
-                  "authorizationServerMetadataUrl": {
-                    "type": "string",
-                    "format": "uri"
                   }
                 },
                 "required": [
@@ -5682,10 +5674,6 @@
                         "jwksUri": {
                           "type": "string",
                           "format": "uri"
-                        },
-                        "authorizationServerMetadataUrl": {
-                          "type": "string",
-                          "nullable": true
                         },
                         "createdAt": {
                           "type": "string",
@@ -6235,21 +6223,12 @@
         }
       }
     },
-    "/mcp/.well-known/oauth-protected-resource/{organizationSlug}/{serverSlug}": {
+    "/.well-known/oauth-protected-resource/mcp/{serverSlug}": {
       "get": {
         "tags": [
           "mcp-runtime"
         ],
         "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            },
-            "in": "path",
-            "name": "organizationSlug",
-            "required": true
-          },
           {
             "schema": {
               "type": "string",
@@ -6267,21 +6246,12 @@
         }
       }
     },
-    "/mcp/{organizationSlug}/{serverSlug}": {
+    "/mcp/{serverSlug}": {
       "get": {
         "tags": [
           "mcp-runtime"
         ],
         "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            },
-            "in": "path",
-            "name": "organizationSlug",
-            "required": true
-          },
           {
             "schema": {
               "type": "string",
@@ -6309,15 +6279,6 @@
               "minLength": 1
             },
             "in": "path",
-            "name": "organizationSlug",
-            "required": true
-          },
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            },
-            "in": "path",
             "name": "serverSlug",
             "required": true
           }
@@ -6333,15 +6294,6 @@
           "mcp-runtime"
         ],
         "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            },
-            "in": "path",
-            "name": "organizationSlug",
-            "required": true
-          },
           {
             "schema": {
               "type": "string",

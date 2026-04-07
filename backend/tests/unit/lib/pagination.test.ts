@@ -16,6 +16,18 @@ test("paginationSchema applies defaults and coercion", () => {
   });
 });
 
+test("paginationSchema parses false boolean query parameters correctly", () => {
+  const parsed = paginationSchema.parse({
+    isActive: "false"
+  });
+
+  assert.deepEqual(parsed, {
+    page: 1,
+    pageSize: 20,
+    isActive: false
+  });
+});
+
 test("toOffset converts page and pageSize to a row offset", () => {
   assert.equal(toOffset(1, 20), 0);
   assert.equal(toOffset(3, 20), 40);

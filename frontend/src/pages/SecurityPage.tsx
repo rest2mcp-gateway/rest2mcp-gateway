@@ -17,8 +17,7 @@ export default function SecurityPage() {
 
   const [form, setForm] = useState<AuthServerConfigFormData>({
     issuer: "",
-    jwksUri: "",
-    authorizationServerMetadataUrl: ""
+    jwksUri: ""
   });
 
   useEffect(() => {
@@ -28,8 +27,7 @@ export default function SecurityPage() {
 
     setForm({
       issuer: configQuery.data.issuer,
-      jwksUri: configQuery.data.jwksUri,
-      authorizationServerMetadataUrl: configQuery.data.authorizationServerMetadataUrl ?? ""
+      jwksUri: configQuery.data.jwksUri
     });
   }, [configQuery.data]);
 
@@ -60,7 +58,7 @@ export default function SecurityPage() {
           <CardTitle>Authorization Server</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {configQuery.isLoading ? <LoadingState rows={3} /> : null}
+          {configQuery.isLoading ? <LoadingState rows={2} /> : null}
           <div className="space-y-1.5">
             <FieldLabel required>Issuer</FieldLabel>
             <Input value={form.issuer} onChange={(event) => updateField("issuer", event.target.value)} placeholder="https://auth.example.com" className="font-mono text-sm" />
@@ -68,10 +66,6 @@ export default function SecurityPage() {
           <div className="space-y-1.5">
             <FieldLabel required>JWKS URI</FieldLabel>
             <Input value={form.jwksUri} onChange={(event) => updateField("jwksUri", event.target.value)} placeholder="https://auth.example.com/.well-known/jwks.json" className="font-mono text-sm" />
-          </div>
-          <div className="space-y-1.5">
-            <FieldLabel>Authorization Server Metadata URL</FieldLabel>
-            <Input value={form.authorizationServerMetadataUrl ?? ""} onChange={(event) => updateField("authorizationServerMetadataUrl", event.target.value)} placeholder="https://auth.example.com/.well-known/oauth-authorization-server" className="font-mono text-sm" />
           </div>
         </CardContent>
       </Card>

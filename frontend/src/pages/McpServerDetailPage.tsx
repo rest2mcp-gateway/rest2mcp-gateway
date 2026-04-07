@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { getMcpRuntimeUrl, mcpServersApi, organizationsApi, toolsApi } from "@/services/api-client";
+import { getMcpRuntimeUrl, mcpServersApi, toolsApi } from "@/services/api-client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,16 +45,9 @@ export default function McpServerDetailPage() {
     placeholderData: (previousData) => previousData
   });
 
-  const organizationsQuery = useQuery({
-    queryKey: ["organizations", "all"],
-    queryFn: () => organizationsApi.listAll(),
-    enabled: !isNew
-  });
-
   const server = serverQuery.data;
   const tools = toolsQuery.data?.items ?? [];
   const hasToolsData = tools.length > 0;
-  const organizationSlug = organizationsQuery.data?.find((organization) => organization.id === server?.organizationId)?.slug;
 
   const [form, setForm] = useState<McpServerFormData>({
     name: "",
@@ -285,7 +278,7 @@ export default function McpServerDetailPage() {
                 <FieldLabel>MCP Runtime URL</FieldLabel>
                 <Textarea
                   readOnly
-                  value={organizationSlug ? getMcpRuntimeUrl(organizationSlug, server.slug) : "Resolving organization slug..."}
+                  value={getMcpRuntimeUrl(server.slug)}
                   className="font-mono text-xs min-h-20"
                 />
               </CardContent>

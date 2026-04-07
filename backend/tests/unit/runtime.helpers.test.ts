@@ -6,8 +6,10 @@ import {
   applyAuthConfig,
   compileSnapshot,
   createContentBlocks,
+  createStructuredContent,
   joinUrl,
   normalizeToolArguments,
+  normalizeBackendErrorResponse,
   parseBackendResponse,
   parseRetryCount,
   parseSnapshotJson,
@@ -65,6 +67,30 @@ test("renderBodyTemplate throws for missing raw placeholder input", () => {
       assert.equal(error.code, "missing_tool_input");
       return true;
     }
+  );
+});
+
+test("renderBodyTemplate preserves escaped strings and supports array placeholders", () => {
+  const rendered = renderBodyTemplate(
+    "{\"message\":\"say \\\"{{name}}\\\"\",\"tags\":{{tags}},\"metadata\":{\"active\":$active}}",
+    {
+      name: "Ada",
+      tags: ["alpha", "beta"],
+      active: true
+    }
+  );
+
+  assert.deepEqual(rendered, {
+    message: "say \"Ada\"",
+    tags: ["alpha", "beta"],
+    metadata: { active: true }
+  });
+});
+
+test("renderBodyTemplate surfaces invalid JSON templates", () => {
+  assert.throws(
+    () => renderBodyTemplate("{\"widgetId\": {{ widgetId }", { widgetId: "widget-42" }),
+    /JSON/
   );
 });
 
@@ -175,6 +201,78 @@ test("applyAuthConfig resolves bearer, oauth2, and basic secrets", () => {
   );
 });
 
+test("applyAuthConfig supports legacy plaintext secret fields", () => {
+  const bearerHeaders = new Headers();
+  applyAuthConfig(new URL("https://backend.example.com"), bearerHeaders, {
+    id: "api-1",
+    organizationId: "org-1",
+    name: "Bearer API",
+    slug: "bearer-api",
+    description: null,
+    defaultBaseUrl: "https://backend.example.com",
+    authType: "bearer",
+    authConfig: { token: "legacy-bearer" },
+    defaultTimeoutMs: 30000,
+    retryPolicy: {},
+    isActive: true
+  });
+  assert.equal(bearerHeaders.get("authorization"), "Bearer legacy-bearer");
+
+  const oauthHeaders = new Headers();
+  applyAuthConfig(new URL("https://backend.example.com"), oauthHeaders, {
+    id: "api-2",
+    organizationId: "org-1",
+    name: "OAuth API",
+    slug: "oauth-api",
+    description: null,
+    defaultBaseUrl: "https://backend.example.com",
+    authType: "oauth2",
+    authConfig: { accessToken: "legacy-oauth" },
+    defaultTimeoutMs: 30000,
+    retryPolicy: {},
+    isActive: true
+  });
+  assert.equal(oauthHeaders.get("authorization"), "Bearer legacy-oauth");
+
+  const basicHeaders = new Headers();
+  applyAuthConfig(new URL("https://backend.example.com"), basicHeaders, {
+    id: "api-3",
+    organizationId: "org-1",
+    name: "Basic API",
+    slug: "basic-api",
+    description: null,
+    defaultBaseUrl: "https://backend.example.com",
+    authType: "basic",
+    authConfig: {
+      username: "legacy-user",
+      password: "legacy-pass"
+    },
+    defaultTimeoutMs: 30000,
+    retryPolicy: {},
+    isActive: true
+  });
+  assert.equal(
+    basicHeaders.get("authorization"),
+    `Basic ${Buffer.from("legacy-user:legacy-pass").toString("base64")}`
+  );
+
+  const queryUrl = new URL("https://backend.example.com/widgets");
+  applyAuthConfig(queryUrl, new Headers(), {
+    id: "api-4",
+    organizationId: "org-1",
+    name: "API Key API",
+    slug: "api-key-api",
+    description: null,
+    defaultBaseUrl: "https://backend.example.com",
+    authType: "api_key",
+    authConfig: { name: "api_key", in: "query", value: "legacy-secret" },
+    defaultTimeoutMs: 30000,
+    retryPolicy: {},
+    isActive: true
+  });
+  assert.equal(queryUrl.searchParams.get("api_key"), "legacy-secret");
+});
+
 test("joinUrl normalizes leading and trailing slashes", () => {
   assert.equal(
     joinUrl("https://backend.example.com/api", "/widgets").toString(),
@@ -202,9 +300,14 @@ test("parseBackendResponse reads json and plain text bodies", async () => {
   const textResponse = new Response("plain-text", {
     headers: { "content-type": "text/plain" }
   });
+  const emptyResponse = new Response(null, {
+    status: 204,
+    headers: { "content-type": "text/plain" }
+  });
 
   assert.deepEqual(await parseBackendResponse(jsonResponse), { ok: true });
   assert.equal(await parseBackendResponse(textResponse), "plain-text");
+  assert.equal(await parseBackendResponse(emptyResponse), "");
 });
 
 test("createContentBlocks formats strings and objects for MCP output", () => {
@@ -212,6 +315,104 @@ test("createContentBlocks formats strings and objects for MCP output", () => {
   assert.deepEqual(createContentBlocks({ ok: true }), [
     { type: "text", text: "{\n  \"ok\": true\n}" }
   ]);
+});
+
+test("createStructuredContent preserves objects and wraps top-level arrays", () => {
+  assert.deepEqual(createStructuredContent({ ok: true }), { ok: true });
+  assert.deepEqual(createStructuredContent([{ id: 1 }, { id: 2 }]), {
+    items: [{ id: 1 }, { id: 2 }]
+  });
+});
+
+test("createStructuredContent omits scalar values that are not valid MCP structured content", () => {
+  assert.equal(createStructuredContent("plain-text"), undefined);
+  assert.equal(createStructuredContent(42), undefined);
+  assert.equal(createStructuredContent(null), undefined);
+});
+
+test("normalizeBackendErrorResponse maps known backend statuses to explicit MCP tool errors", () => {
+  assert.deepEqual(normalizeBackendErrorResponse(404, {}), {
+    status: 404,
+    error: "backend_not_found",
+    message: "Backend returned 404 Not Found"
+  });
+  assert.deepEqual(normalizeBackendErrorResponse(401, {}), {
+    status: 401,
+    error: "backend_unauthorized",
+    message: "Backend returned 401 Unauthorized"
+  });
+  assert.deepEqual(normalizeBackendErrorResponse(403, {}), {
+    status: 403,
+    error: "backend_forbidden",
+    message: "Backend returned 403 Forbidden"
+  });
+  assert.deepEqual(normalizeBackendErrorResponse(409, {}), {
+    status: 409,
+    error: "backend_conflict",
+    message: "Backend returned 409 Conflict"
+  });
+  assert.deepEqual(normalizeBackendErrorResponse(422, {}), {
+    status: 422,
+    error: "backend_validation_error",
+    message: "Backend returned 422 Unprocessable Content"
+  });
+  assert.deepEqual(normalizeBackendErrorResponse(429, {}), {
+    status: 429,
+    error: "backend_rate_limited",
+    message: "Backend returned 429 Too Many Requests"
+  });
+  assert.deepEqual(normalizeBackendErrorResponse(500, {}), {
+    status: 500,
+    error: "backend_internal_error",
+    message: "Backend returned 500 Internal Server Error"
+  });
+  assert.deepEqual(normalizeBackendErrorResponse(502, {}), {
+    status: 502,
+    error: "backend_unavailable",
+    message: "Backend returned 502 Bad Gateway"
+  });
+  assert.deepEqual(normalizeBackendErrorResponse(503, {}), {
+    status: 503,
+    error: "backend_unavailable",
+    message: "Backend returned 503 Service Unavailable"
+  });
+  assert.deepEqual(normalizeBackendErrorResponse(504, {}), {
+    status: 504,
+    error: "backend_unavailable",
+    message: "Backend returned 504 Gateway Timeout"
+  });
+  assert.deepEqual(normalizeBackendErrorResponse(400, {}), {
+    status: 400,
+    error: "backend_bad_request",
+    message: "Backend returned 400 Bad Request"
+  });
+});
+
+test("normalizeBackendErrorResponse preserves useful backend error bodies and fills gaps", () => {
+  assert.deepEqual(
+    normalizeBackendErrorResponse(502, {
+      error: "backend_unavailable",
+      message: "Stub backend failed"
+    }),
+    {
+      status: 502,
+      error: "backend_unavailable",
+      message: "Stub backend failed"
+    }
+  );
+
+  assert.deepEqual(normalizeBackendErrorResponse(404, "No matching post"), {
+    status: 404,
+    error: "backend_not_found",
+    message: "No matching post"
+  });
+
+  assert.deepEqual(normalizeBackendErrorResponse(422, [{ field: "title", error: "required" }]), {
+    status: 422,
+    error: "backend_validation_error",
+    message: "Backend returned 422 Unprocessable Content",
+    details: [{ field: "title", error: "required" }]
+  });
 });
 
 test("parseSnapshotJson and compileSnapshot normalize runtime state", () => {
@@ -345,4 +546,198 @@ test("parseSnapshotJson and compileSnapshot normalize runtime state", () => {
   assert.deepEqual(server.requiredScopes, ["widgets:read", "widgets:write"]);
   assert.equal(server.tools.length, 1);
   assert.equal(server.toolsByName.get("create_widget")?.backendResource.operationId, "createWidget");
+});
+
+test("compileSnapshot filters inactive servers, tools, APIs, and resources", () => {
+  const serversBySlug = compileSnapshot("acme", parseSnapshotJson({
+    version: 1,
+    generatedAt: "2026-01-01T00:00:00.000Z",
+    authServerConfig: null,
+    backendApis: [
+      {
+        id: "api-active",
+        organizationId: "org-1",
+        name: "Active API",
+        slug: "active-api",
+        description: null,
+        defaultBaseUrl: "https://active.example.com",
+        authType: "none",
+        authConfig: {},
+        defaultTimeoutMs: 30000,
+        retryPolicy: {},
+        isActive: true
+      },
+      {
+        id: "api-inactive",
+        organizationId: "org-1",
+        name: "Inactive API",
+        slug: "inactive-api",
+        description: null,
+        defaultBaseUrl: "https://inactive.example.com",
+        authType: "none",
+        authConfig: {},
+        defaultTimeoutMs: 30000,
+        retryPolicy: {},
+        isActive: false
+      }
+    ],
+    backendResources: [
+      {
+        id: "resource-active",
+        backendApiId: "api-active",
+        name: "Active resource",
+        operationId: "activeResource",
+        description: null,
+        httpMethod: "POST",
+        pathTemplate: "/widgets/{widgetId}",
+        bodyTemplate: null,
+        requestSchema: {},
+        responseSchema: {},
+        isActive: true
+      },
+      {
+        id: "resource-inactive",
+        backendApiId: "api-active",
+        name: "Inactive resource",
+        operationId: "inactiveResource",
+        description: null,
+        httpMethod: "POST",
+        pathTemplate: "/widgets/{widgetId}",
+        bodyTemplate: null,
+        requestSchema: {},
+        responseSchema: {},
+        isActive: false
+      }
+    ],
+    mcpServers: [
+      {
+        id: "server-active",
+        organizationId: "org-1",
+        name: "Active Server",
+        slug: "active-server",
+        version: "1.0.0",
+        title: "Active Server",
+        description: null,
+        authMode: "local",
+        accessMode: "public",
+        audience: null,
+        isActive: true
+      },
+      {
+        id: "server-inactive",
+        organizationId: "org-1",
+        name: "Inactive Server",
+        slug: "inactive-server",
+        version: "1.0.0",
+        title: "Inactive Server",
+        description: null,
+        authMode: "local",
+        accessMode: "public",
+        audience: null,
+        isActive: false
+      }
+    ],
+    tools: [
+      {
+        id: "tool-active",
+        mcpServerId: "server-active",
+        name: "active_tool",
+        slug: "active-tool",
+        title: "Active Tool",
+        description: null,
+        inputSchema: {},
+        outputSchema: {},
+        examples: [],
+        riskLevel: "low",
+        isActive: true
+      },
+      {
+        id: "tool-inactive",
+        mcpServerId: "server-active",
+        name: "inactive_tool",
+        slug: "inactive-tool",
+        title: "Inactive Tool",
+        description: null,
+        inputSchema: {},
+        outputSchema: {},
+        examples: [],
+        riskLevel: "low",
+        isActive: false
+      },
+      {
+        id: "tool-with-inactive-api",
+        mcpServerId: "server-active",
+        name: "inactive_api_tool",
+        slug: "inactive-api-tool",
+        title: "Inactive API Tool",
+        description: null,
+        inputSchema: {},
+        outputSchema: {},
+        examples: [],
+        riskLevel: "low",
+        isActive: true
+      },
+      {
+        id: "tool-on-inactive-server",
+        mcpServerId: "server-inactive",
+        name: "inactive_server_tool",
+        slug: "inactive-server-tool",
+        title: "Inactive Server Tool",
+        description: null,
+        inputSchema: {},
+        outputSchema: {},
+        examples: [],
+        riskLevel: "low",
+        isActive: true
+      }
+    ],
+    scopes: [],
+    toolMappings: [
+      {
+        id: "mapping-active",
+        toolId: "tool-active",
+        backendApiId: "api-active",
+        backendResourceId: "resource-active",
+        requestMapping: {},
+        responseMapping: {},
+        errorMapping: {},
+        authStrategy: "inherit",
+        timeoutOverrideMs: null,
+        retryOverride: null,
+        isActive: true
+      },
+      {
+        id: "mapping-to-inactive-resource",
+        toolId: "tool-inactive",
+        backendApiId: "api-active",
+        backendResourceId: "resource-inactive",
+        requestMapping: {},
+        responseMapping: {},
+        errorMapping: {},
+        authStrategy: "inherit",
+        timeoutOverrideMs: null,
+        retryOverride: null,
+        isActive: true
+      },
+      {
+        id: "mapping-to-inactive-api",
+        toolId: "tool-with-inactive-api",
+        backendApiId: "api-inactive",
+        backendResourceId: "resource-active",
+        requestMapping: {},
+        responseMapping: {},
+        errorMapping: {},
+        authStrategy: "inherit",
+        timeoutOverrideMs: null,
+        retryOverride: null,
+        isActive: true
+      }
+    ],
+    toolScopes: []
+  }));
+
+  assert.equal(serversBySlug.size, 1);
+  const server = serversBySlug.get("active-server");
+  assert.ok(server);
+  assert.deepEqual(server.tools.map((entry) => entry.tool.name), ["active_tool"]);
 });

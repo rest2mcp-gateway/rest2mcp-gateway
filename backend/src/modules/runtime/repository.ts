@@ -49,6 +49,17 @@ export const runtimeRepository = {
     return row ?? null;
   },
 
+  async listOrganizationsWithPublishedSnapshots(app: FastifyInstance) {
+    return app.db
+      .selectDistinct({
+        id: organizations.id,
+        slug: organizations.slug
+      })
+      .from(runtimeSnapshots)
+      .innerJoin(organizations, eq(runtimeSnapshots.organizationId, organizations.id))
+      .where(eq(runtimeSnapshots.status, "published"));
+  },
+
   async insertExecutionLog(
     app: FastifyInstance,
     values: typeof executionLogs.$inferInsert
