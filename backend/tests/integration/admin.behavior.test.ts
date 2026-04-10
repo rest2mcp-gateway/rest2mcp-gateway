@@ -263,12 +263,25 @@ test("backend API auth config creation and updates preserve or replace secrets c
     assert.equal((storedApiKey?.authConfig as Record<string, unknown>).name, "x-api-key-updated");
     assert.equal(typeof (storedApiKey?.authConfig as Record<string, unknown>).encryptedValue, "string");
 
+    const tokenExchangeEnabled = await adminRequest(handle.app, session, {
+      method: "PATCH",
+      url: `/api/admin/v1/backend-apis/${apiKeyApi.body.data.id}`,
+      payload: {
+        tokenExchangeEnabled: true,
+        tokenExchangeAudience: "urn:widgets-api"
+      }
+    });
+    assert.equal(tokenExchangeEnabled.response.statusCode, 200, tokenExchangeEnabled.response.body);
+    assert.equal(tokenExchangeEnabled.body.data.tokenExchangeEnabled, true);
+    assert.equal(tokenExchangeEnabled.body.data.tokenExchangeAudience, "urn:widgets-api");
+
     const switchedBearer = await adminRequest(handle.app, session, {
       method: "PATCH",
       url: `/api/admin/v1/backend-apis/${apiKeyApi.body.data.id}`,
       payload: {
         authType: "bearer",
-        bearerToken: "bearer-secret"
+        bearerToken: "bearer-secret",
+        tokenExchangeEnabled: false
       }
     });
     assert.equal(switchedBearer.response.statusCode, 200, switchedBearer.response.body);
@@ -394,21 +407,30 @@ test("security auth-server config can be created and updated, and protected publ
       url: "/api/admin/v1/security/auth-server",
       payload: {
         issuer: "https://issuer.example.test",
-        jwksUri: "https://issuer.example.test/jwks.json"
+        jwksUri: "https://issuer.example.test/jwks.json",
+        tokenEndpoint: "https://issuer.example.test/token",
+        clientId: "gateway-client",
+        clientSecret: "gateway-secret"
       }
     });
     assert.equal(createdConfig.response.statusCode, 200, createdConfig.response.body);
+    assert.equal(createdConfig.body.data.tokenEndpoint, "https://issuer.example.test/token");
+    assert.equal(createdConfig.body.data.clientId, "gateway-client");
+    assert.equal(createdConfig.body.data.hasClientSecret, true);
 
     const updatedConfig = await adminRequest(handle.app, session, {
       method: "PUT",
       url: "/api/admin/v1/security/auth-server",
       payload: {
         issuer: "https://issuer.example.test/v2",
-        jwksUri: "https://issuer.example.test/v2/jwks.json"
+        jwksUri: "https://issuer.example.test/v2/jwks.json",
+        tokenEndpoint: "https://issuer.example.test/v2/token",
+        clientId: "gateway-client-v2"
       }
     });
     assert.equal(updatedConfig.response.statusCode, 200, updatedConfig.response.body);
     assert.equal(updatedConfig.body.data.issuer, "https://issuer.example.test/v2");
+    assert.equal(updatedConfig.body.data.hasClientSecret, true);
 
     const snapshot = await validateAndPublish(handle.app, session);
     assert.equal(snapshot.version, 1);

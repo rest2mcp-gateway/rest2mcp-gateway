@@ -17,7 +17,10 @@ export default function SecurityPage() {
 
   const [form, setForm] = useState<AuthServerConfigFormData>({
     issuer: "",
-    jwksUri: ""
+    jwksUri: "",
+    tokenEndpoint: "",
+    clientId: "",
+    clientSecret: ""
   });
 
   useEffect(() => {
@@ -27,7 +30,10 @@ export default function SecurityPage() {
 
     setForm({
       issuer: configQuery.data.issuer,
-      jwksUri: configQuery.data.jwksUri
+      jwksUri: configQuery.data.jwksUri,
+      tokenEndpoint: configQuery.data.tokenEndpoint ?? "",
+      clientId: configQuery.data.clientId ?? "",
+      clientSecret: ""
     });
   }, [configQuery.data]);
 
@@ -58,7 +64,7 @@ export default function SecurityPage() {
           <CardTitle>Authorization Server</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {configQuery.isLoading ? <LoadingState rows={2} /> : null}
+          {configQuery.isLoading ? <LoadingState rows={4} /> : null}
           <div className="space-y-1.5">
             <FieldLabel required>Issuer</FieldLabel>
             <Input value={form.issuer} onChange={(event) => updateField("issuer", event.target.value)} placeholder="https://auth.example.com" className="font-mono text-sm" />
@@ -66,6 +72,26 @@ export default function SecurityPage() {
           <div className="space-y-1.5">
             <FieldLabel required>JWKS URI</FieldLabel>
             <Input value={form.jwksUri} onChange={(event) => updateField("jwksUri", event.target.value)} placeholder="https://auth.example.com/.well-known/jwks.json" className="font-mono text-sm" />
+          </div>
+          <div className="space-y-1.5">
+            <FieldLabel>Token Endpoint</FieldLabel>
+            <Input value={form.tokenEndpoint ?? ""} onChange={(event) => updateField("tokenEndpoint", event.target.value)} placeholder="https://auth.example.com/oauth2/token" className="font-mono text-sm" />
+          </div>
+          <div className="space-y-1.5">
+            <FieldLabel>Client ID</FieldLabel>
+            <Input value={form.clientId ?? ""} onChange={(event) => updateField("clientId", event.target.value)} placeholder="rest2mcp-gateway" className="font-mono text-sm" />
+          </div>
+          <div className="space-y-1.5">
+            <FieldLabel>Client Secret</FieldLabel>
+            <Input
+              type="password"
+              value={form.clientSecret ?? ""}
+              onChange={(event) => updateField("clientSecret", event.target.value)}
+              placeholder={configQuery.data?.hasClientSecret ? "Configured. Leave blank to keep the current secret." : "Enter the token exchange client secret"}
+            />
+            {configQuery.data?.hasClientSecret ? (
+              <p className="text-xs text-muted-foreground">A client secret is already configured and remains write-only. Enter a new value only if you want to replace it.</p>
+            ) : null}
           </div>
         </CardContent>
       </Card>

@@ -62,6 +62,8 @@ export default function BackendApiDetailPage() {
     apiKeyLocation: "header",
     apiKeyName: "x-api-key",
     apiKeyValue: "",
+    tokenExchangeEnabled: false,
+    tokenExchangeAudience: "",
     bearerToken: "",
     basicUsername: "",
     basicPassword: "",
@@ -88,6 +90,8 @@ export default function BackendApiDetailPage() {
       apiKeyValue: "",
       hasApiKeyValue: api.hasApiKeyValue ?? false,
       apiKeyMaskedValue: api.apiKeyMaskedValue ?? null,
+      tokenExchangeEnabled: api.tokenExchangeEnabled ?? false,
+      tokenExchangeAudience: api.tokenExchangeAudience ?? "",
       bearerToken: "",
       hasBearerToken: api.hasBearerToken ?? false,
       basicUsername: api.basicUsername ?? "",
@@ -264,6 +268,31 @@ export default function BackendApiDetailPage() {
                   <Switch checked={form.isActive} onCheckedChange={(v) => updateField("isActive", v)} />
                   <Label>Active</Label>
                 </div>
+              </div>
+
+              <div className="rounded-md border border-border/60 bg-muted/20 p-4 space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <FieldLabel>Token Exchange</FieldLabel>
+                    <p className="text-sm text-muted-foreground">Exchange the inbound MCP bearer token for a backend-specific access token using the shared authorization server settings.</p>
+                  </div>
+                  <Switch checked={form.tokenExchangeEnabled ?? false} onCheckedChange={(value) => updateField("tokenExchangeEnabled", value)} />
+                </div>
+                {form.tokenExchangeEnabled ? (
+                  <div className="space-y-1.5">
+                    <FieldLabel required>Backend Audience</FieldLabel>
+                    <Input
+                      value={form.tokenExchangeAudience ?? ""}
+                      onChange={(e) => updateField("tokenExchangeAudience", e.target.value)}
+                      className="font-mono text-sm"
+                      placeholder="urn:backend-api"
+                    />
+                    <p className="text-xs text-muted-foreground">The gateway forwards the inbound scopes as-is for now and requests a downstream token for this audience.</p>
+                  </div>
+                ) : null}
+                {form.tokenExchangeEnabled && !["none", "api_key"].includes(form.authType) ? (
+                  <p className="text-xs text-amber-300">Token exchange can currently be combined only with `None` or `API Key` backend auth.</p>
+                ) : null}
               </div>
 
               {form.authType === "api_key" ? (

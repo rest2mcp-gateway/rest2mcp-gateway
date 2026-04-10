@@ -27,6 +27,28 @@ export const validateDraftContext = (context: DraftContext) => {
     issues.push("Every protected MCP server must define an audience");
   }
 
+  const tokenExchangeApis = context.backendApis.filter((api) => api.tokenExchangeEnabled === true);
+  if (tokenExchangeApis.length > 0 && !context.authServerConfig) {
+    issues.push("Token exchange requires an authorization server configuration");
+  }
+
+  if (
+    tokenExchangeApis.length > 0 &&
+    (!context.authServerConfig?.tokenEndpoint ||
+      !context.authServerConfig?.clientId ||
+      !context.authServerConfig?.encryptedClientSecret)
+  ) {
+    issues.push("Token exchange requires token endpoint, client ID, and client secret on the authorization server configuration");
+  }
+
+  if (tokenExchangeApis.some((api) => !api.tokenExchangeAudience)) {
+    issues.push("Every backend API with token exchange enabled must define a token exchange audience");
+  }
+
+  if (tokenExchangeApis.some((api) => ["bearer", "basic", "oauth2"].includes(api.authType))) {
+    issues.push("Token exchange can only be combined with none or API key backend auth");
+  }
+
   if (context.tools.some((tool) => !context.mcpServers.some((server) => server.id === tool.mcpServerId))) {
     issues.push("Every tool must reference an existing MCP server");
   }
@@ -52,6 +74,15 @@ export const validateDraftContext = (context: DraftContext) => {
     return resource ? resource.backendApiId !== mapping.backendApiId : false;
   })) {
     issues.push("Every tool mapping must reference a backend resource belonging to the selected backend API");
+  }
+
+  if (context.toolMappings.some((mapping) => {
+    const backendApi = context.backendApis.find((api) => api.id === mapping.backendApiId);
+    const tool = context.tools.find((item) => item.id === mapping.toolId);
+    const server = tool ? context.mcpServers.find((item) => item.id === tool.mcpServerId) : null;
+    return backendApi?.tokenExchangeEnabled === true && server?.accessMode !== "protected";
+  })) {
+    issues.push("Backend APIs using token exchange may only be mapped to protected MCP servers");
   }
 
   return issues;

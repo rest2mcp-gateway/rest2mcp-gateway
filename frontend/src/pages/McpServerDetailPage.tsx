@@ -25,6 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState, ErrorState, LoadingState, PageHeader, StatusBadge, FieldLabel } from "@/components/shared";
 import type { McpServerFormData } from "@/contracts/admin-api";
+import { getStoredMcpTestToken, setStoredMcpTestToken } from "@/lib/mcp-test-token";
 
 export default function McpServerDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -60,6 +61,7 @@ export default function McpServerDetailPage() {
     audience: "",
     isActive: true
   });
+  const [testAccessToken, setTestAccessToken] = useState("");
 
   useEffect(() => {
     if (!server) {
@@ -77,6 +79,7 @@ export default function McpServerDetailPage() {
       audience: server.audience ?? "",
       isActive: server.isActive
     });
+    setTestAccessToken(getStoredMcpTestToken(server.id));
   }, [server]);
 
   const saveMutation = useMutation({
@@ -281,6 +284,26 @@ export default function McpServerDetailPage() {
                   value={getMcpRuntimeUrl(server.slug)}
                   className="font-mono text-xs min-h-20"
                 />
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {!isNew && server && form.accessMode === "protected" ? (
+            <Card>
+              <CardContent className="p-5 space-y-2">
+                <FieldLabel htmlFor="mcp-server-detail-test-access-token">Test OAuth Access Token</FieldLabel>
+                <Input
+                  id="mcp-server-detail-test-access-token"
+                  type="password"
+                  value={testAccessToken}
+                  onChange={(event) => {
+                    const nextToken = event.target.value;
+                    setTestAccessToken(nextToken);
+                    setStoredMcpTestToken(server.id, nextToken);
+                  }}
+                  placeholder="Saved locally and reused by the MCP and tool test pages"
+                />
+                <p className="text-xs text-muted-foreground">This token stays in the current browser only. The test pages use it for `initialize`, `tools/list`, and tool execution against this server.</p>
               </CardContent>
             </Card>
           ) : null}

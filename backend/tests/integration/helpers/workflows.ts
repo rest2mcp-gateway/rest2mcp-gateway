@@ -30,16 +30,14 @@ type CreateUserInput = {
   isActive?: boolean;
 };
 
-type BackendApiAuthOptions =
-  | {
-      authType?: "none";
-    }
-  | {
-      authType: "api_key";
-      apiKeyLocation: "header" | "query";
-      apiKeyName: string;
-      apiKeyValue: string;
-    };
+type BackendApiAuthOptions = {
+  authType?: "none" | "api_key";
+  apiKeyLocation?: "header" | "query";
+  apiKeyName?: string;
+  apiKeyValue?: string;
+  tokenExchangeEnabled?: boolean;
+  tokenExchangeAudience?: string;
+};
 
 type McpServerOptions =
   | {
@@ -194,6 +192,12 @@ export const createRuntimeFixture = async (
             apiKeyLocation: authOptions.apiKeyLocation,
             apiKeyName: authOptions.apiKeyName,
             apiKeyValue: authOptions.apiKeyValue
+          }
+        : {}),
+      tokenExchangeEnabled: authOptions.tokenExchangeEnabled ?? false,
+      ...(authOptions.tokenExchangeEnabled
+        ? {
+            tokenExchangeAudience: authOptions.tokenExchangeAudience
           }
         : {}),
       defaultTimeoutMs: 5_000,
@@ -479,6 +483,9 @@ export const upsertAuthServerConfig = async (
   payload: {
     issuer: string;
     jwksUri: string;
+    tokenEndpoint?: string;
+    clientId?: string;
+    clientSecret?: string;
   }
 ) => {
   const result = await request(app, {

@@ -8,39 +8,35 @@ The goal is simple: shorten the path from an existing REST API to a usable MCP s
 
 Today, Rest2MC Gateway targets the HTTP-based MCP server model, exposing runtime servers over the [MCP transport specification](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports) using Streamable HTTP. For protected servers, it also supports the [MCP authorization model](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization), including OAuth 2.0 [Protected Resource Metadata](https://datatracker.ietf.org/doc/html/rfc9728) discovery and bearer-token validation against an external authorization server described by [OAuth 2.0 Authorization Server Metadata](https://datatracker.ietf.org/doc/html/rfc8414). In practice, that means this gateway focuses on HTTP runtime interoperability and OAuth-based access control rather than stdio transport or acting as an OAuth authorization server itself.
 
+Current limitations:
+
+- the gateway currently focuses on the Streamable HTTP transport, not stdio
+- the admin and runtime experience is optimized for local development first; production deployment guidance exists in `docs/` and will continue to evolve
+- the runtime accepts the MCP Streamable HTTP contract, including `Accept: application/json, text/event-stream`, but the product does not currently provide a separate browser-based SSE session manager or long-lived streaming UX beyond the HTTP runtime surface itself
+
 With Rest2MC Gateway, you can:
 
 - connect existing backend APIs to MCP-facing tools
 - define MCP servers and tool catalogs without custom integration code
 - manage mappings, scopes, secrets, and access rules in one place
-- validate configurations before release
-- publish runtime snapshots for consistent MCP execution
 - operate everything through both an admin API and a browser-based admin UI
 
 The repository contains the full product: the admin API, the runtime endpoints, and the admin interface served from the same application.
 
+Today, the default experience is a development-first deployment model: one app process serves the admin UI, the admin API, and the MCP runtime on the same host. The repository already includes deployment-oriented documentation, but the quickest path is still local development with the embedded database and a bootstrap admin account.
+
 ## How it works
 
-At a high level, Rest2MC Gateway turns an existing REST integration into a publishable MCP experience:
+At a high level, Rest2MC Gateway turns an existing REST integration into a publishable MCP server. As an administrator you will:
 
-1. Add an organization and admins.
+1. Login into the admin UI.
 2. Register one or more backend APIs.
 3. Define backend resources and operations that can be called.
 4. Create MCP servers and tools.
 5. Map each tool to the backend resource it should execute.
 6. Configure scopes, secrets, and other runtime settings.
-7. Validate the draft configuration.
-8. Publish a runtime snapshot.
 
-Once published, the runtime serves the MCP-facing configuration from the same application.
-
-## Product surfaces
-
-- Admin UI: `/`
-- Admin API: `/api/admin/v1`
-- Runtime endpoints: `/mcp`
-- API docs: `/docs`
-- Health check: `/health`
+The runtime will serve the MCP-facing configuration and act as an MCP to REST gateway.
 
 ## Getting started
 
@@ -52,7 +48,7 @@ Copy the sample environment file:
 cp .env.example .env
 ```
 
-For a first local run, the defaults are usually enough.
+Then set the required values. You can place them in `.env` for local development or provide them through your shell or deployment environment.
 
 Prerequisites:
 
@@ -62,7 +58,10 @@ Prerequisites:
 Notes:
 
 - The default setup uses the embedded PGlite database so you can get running quickly.
-- `SECRET_ENCRYPTION_KEY` and `BOOTSTRAP_ADMIN_PASSWORD` must be set explicitly in `.env`.
+- `BOOTSTRAP_ADMIN_PASSWORD` must be set so you can sign in as the initial local admin.
+- `SECRET_ENCRYPTION_KEY` must be set and kept stable. It encrypts stored secrets and the internally persisted JWT signing secret, so changing it later will prevent the app from decrypting previously stored values.
+- `BOOTSTRAP_ADMIN_USERNAME` defaults to `admin`, and `BOOTSTRAP_ADMIN_NAME` defaults to `Local Admin`.
+- `HOST` and `PORT` control where the combined UI, admin API, and runtime server listen.
 - The application generates its admin JWT signing secret on first startup and stores it encrypted in the database.
 
 ### 2. Install dependencies
@@ -100,47 +99,40 @@ Use the bootstrap password from `.env`.
 A typical first run looks like this:
 
 1. Sign in as the bootstrap admin.
-2. Create or review the default organization.
-3. Add a backend API.
-4. Add backend resources or import an OpenAPI definition.
-5. Create an MCP server.
-6. Create one or more tools.
-7. Add tool mappings.
-8. Configure required secrets and scopes.
-9. Validate and publish.
+2. Open the OpenAPI import flow.
+3. Import the example spec at [`examples/openapi/jsonplaceholder-posts.openapi.json`](./examples/openapi/jsonplaceholder-posts.openapi.json).
+4. Set the backend base URL to `https://jsonplaceholder.typicode.com`.
+5. Choose or create an MCP server, for example `posts`.
+6. Complete the import so the backend API, resource, and tool are generated.
+7. Validate and publish the draft configuration from the admin UI.
+8. Call the runtime with the generated MCP server slug.
 
-## Local development behavior
-
-For local development, Rest2MC Gateway still expects explicit `SECRET_ENCRYPTION_KEY` and `BOOTSTRAP_ADMIN_PASSWORD` values.
-
-The one generated credential is the admin JWT signing secret, which is created automatically on first startup and stored encrypted in the database.
-
-## Production-style deployment
-
-The currently supported deployment path is a direct Node.js process.
-
-For a more persistent deployment:
-
-1. Set real secret values in `.env`.
-2. Use the default embedded database path `./data/db`, or override it only if you need a different location.
-3. Build the application.
-4. Start the server.
-
-Commands:
+The example spec in [`examples/openapi/jsonplaceholder-posts.openapi.json`](./examples/openapi/jsonplaceholder-posts.openapi.json) covers four common operations from JSONPlaceholder: list posts, get a single post, create a post, and update a post. After import and publish, a minimal runtime test looks like this:
 
 ```bash
-npm run build
-npm start
+curl -X POST http://localhost:3000/mcp/posts \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "getpost",
+      "arguments": {
+        "id": 1
+      }
+    }
+  }'
 ```
 
-Deployment notes:
+Additional checked-in examples:
 
-- the application serves the admin UI, admin API, and runtime endpoints from the same server process
-- the documented database path is the embedded PGlite store
-- the default embedded database path is `./data/db`; override `PGLITE_DATA_DIR` only if you need a different persistent location
-- in every environment, `SECRET_ENCRYPTION_KEY` and `BOOTSTRAP_ADMIN_PASSWORD` must be set explicitly
-- the JWT signing secret is generated once and stored encrypted in the database
-- container packaging may be added later, but it is not the primary supported distribution path today
+- [`examples/openapi/open-meteo-forecast.openapi.json`](./examples/openapi/open-meteo-forecast.openapi.json) demonstrates a query-parameter-driven API. It is useful for previewing and importing backend resources, but with the current importer it is not auto-exposable as a tool because query parameters are not yet promoted into tool input schemas.
+- [`examples/openapi/ipinfo-lite.openapi.json`](./examples/openapi/ipinfo-lite.openapi.json) demonstrates a simple path-parameter lookup API that can be exposed as a tool and then configured with backend API-key auth in the gateway.
+
+See [`docs/openapi-import.md`](./docs/openapi-import.md) for the import workflow and [`docs/runtime-publishing.md`](./docs/runtime-publishing.md) for validation, publish, and runtime behavior.
+
 
 ## Useful commands
 
@@ -155,7 +147,16 @@ npm run db:generate
 npm run db:push
 ```
 
-`npm run generate:api` exports the backend OpenAPI document to `frontend/openapi/admin-api.json` and regenerates the frontend API types in `frontend/src/generated/admin-api.d.ts`.
+Command summary:
+
+- `npm run dev` starts the development server for the combined application
+- `npm run generate:api` exports the backend OpenAPI document to `frontend/openapi/admin-api.json` and regenerates the frontend API types in `frontend/src/generated/admin-api.d.ts`
+- `npm run check:api` verifies that the generated OpenAPI artifacts are up to date
+- `npm run build` builds the frontend and compiles the backend
+- `npm start` runs the production server entrypoint
+- `npm test` runs the workspace test suite
+- `npm run db:generate` generates Drizzle migration artifacts
+- `npm run db:push` pushes the current schema to the configured database
 
 The repository is organized as a root workspace orchestrator plus two application packages: the Fastify backend in `backend/` and the React admin frontend in `frontend/`.
 
@@ -165,13 +166,14 @@ This project is licensed under the Apache License 2.0.
 
 See [LICENSE](./LICENSE) for the full license text and [NOTICE](./NOTICE) for attribution notices distributed with the project.
 
-## Next documentation areas
+## Documentation
 
-This README is the product-level overview. The next useful docs to add are:
+This README is the product-level overview. For deeper details, use the docs in [`docs/`](./docs/):
 
-- core concepts and entity relationships
-- environment and deployment configuration
-- authentication modes
-- publishing flow and runtime behavior
-- OpenAPI import workflow
-- secrets and scope management
+- [`docs/getting-started.md`](./docs/getting-started.md)
+- [`docs/concepts.md`](./docs/concepts.md)
+- [`docs/deployment.md`](./docs/deployment.md)
+- [`docs/authentication.md`](./docs/authentication.md)
+- [`docs/runtime-publishing.md`](./docs/runtime-publishing.md)
+- [`docs/openapi-import.md`](./docs/openapi-import.md)
+- [`docs/secrets-and-scopes.md`](./docs/secrets-and-scopes.md)

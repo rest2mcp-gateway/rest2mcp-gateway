@@ -480,6 +480,8 @@ export interface paths {
                                 apiKeyValue?: string | null;
                                 hasApiKeyValue?: boolean;
                                 apiKeyMaskedValue?: string | null;
+                                tokenExchangeEnabled: boolean;
+                                tokenExchangeAudience?: string | null;
                                 bearerToken?: string | null;
                                 hasBearerToken?: boolean;
                                 basicUsername?: string | null;
@@ -540,6 +542,9 @@ export interface paths {
                         apiKeyLocation?: "header" | "query";
                         apiKeyName?: string;
                         apiKeyValue?: string;
+                        /** @default false */
+                        tokenExchangeEnabled?: boolean;
+                        tokenExchangeAudience?: string;
                         bearerToken?: string;
                         basicUsername?: string;
                         basicPassword?: string;
@@ -588,6 +593,8 @@ export interface paths {
                                 apiKeyValue?: string | null;
                                 hasApiKeyValue?: boolean;
                                 apiKeyMaskedValue?: string | null;
+                                tokenExchangeEnabled: boolean;
+                                tokenExchangeAudience?: string | null;
                                 bearerToken?: string | null;
                                 hasBearerToken?: boolean;
                                 basicUsername?: string | null;
@@ -677,6 +684,9 @@ export interface paths {
                         apiKeyLocation?: "header" | "query";
                         apiKeyName?: string;
                         apiKeyValue?: string;
+                        /** @default false */
+                        tokenExchangeEnabled?: boolean;
+                        tokenExchangeAudience?: string;
                         bearerToken?: string;
                         basicUsername?: string;
                         basicPassword?: string;
@@ -725,6 +735,8 @@ export interface paths {
                                 apiKeyValue?: string | null;
                                 hasApiKeyValue?: boolean;
                                 apiKeyMaskedValue?: string | null;
+                                tokenExchangeEnabled: boolean;
+                                tokenExchangeAudience?: string | null;
                                 bearerToken?: string | null;
                                 hasBearerToken?: boolean;
                                 basicUsername?: string | null;
@@ -896,6 +908,8 @@ export interface paths {
                                     apiKeyValue?: string | null;
                                     hasApiKeyValue?: boolean;
                                     apiKeyMaskedValue?: string | null;
+                                    tokenExchangeEnabled: boolean;
+                                    tokenExchangeAudience?: string | null;
                                     bearerToken?: string | null;
                                     hasBearerToken?: boolean;
                                     basicUsername?: string | null;
@@ -2479,6 +2493,11 @@ export interface paths {
                                 issuer: string;
                                 /** Format: uri */
                                 jwksUri: string;
+                                /** Format: uri */
+                                tokenEndpoint?: string | null;
+                                clientId?: string | null;
+                                clientSecret?: string | null;
+                                hasClientSecret?: boolean;
                                 /** Format: date-time */
                                 createdAt?: string;
                                 /** Format: date-time */
@@ -2503,6 +2522,10 @@ export interface paths {
                         issuer: string;
                         /** Format: uri */
                         jwksUri: string;
+                        /** Format: uri */
+                        tokenEndpoint?: string;
+                        clientId?: string;
+                        clientSecret?: string;
                     };
                 };
             };
@@ -2523,6 +2546,11 @@ export interface paths {
                                 issuer: string;
                                 /** Format: uri */
                                 jwksUri: string;
+                                /** Format: uri */
+                                tokenEndpoint?: string | null;
+                                clientId?: string | null;
+                                clientSecret?: string | null;
+                                hasClientSecret?: boolean;
                                 /** Format: date-time */
                                 createdAt?: string;
                                 /** Format: date-time */

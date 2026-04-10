@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ErrorState, FieldLabel, LoadingState, PageHeader } from "@/components/shared";
+import { getStoredMcpTestToken, setStoredMcpTestToken } from "@/lib/mcp-test-token";
 
 const prettyJson = (value: unknown) => JSON.stringify(value, null, 2);
 
@@ -65,6 +66,14 @@ export default function ToolTestPage() {
 
   const tool = toolQuery.data;
   const server = serverQuery.data;
+
+  useEffect(() => {
+    if (!server) {
+      return;
+    }
+
+    setBearerToken(getStoredMcpTestToken(server.id));
+  }, [server]);
 
   const initialRequestBody = useMemo(() => {
     if (!tool) {
@@ -168,14 +177,21 @@ export default function ToolTestPage() {
           <div className="space-y-1.5">
             {server?.accessMode === "protected" ? (
               <>
-                <FieldLabel htmlFor="tool-test-bearer-token" required>Bearer Token</FieldLabel>
+                <FieldLabel htmlFor="tool-test-bearer-token" required>Test OAuth Access Token</FieldLabel>
                 <Input
                   id="tool-test-bearer-token"
                   type="password"
                   value={bearerToken}
-                  onChange={(event) => setBearerToken(event.target.value)}
-                  placeholder="Enter an access token for this protected MCP server"
+                  onChange={(event) => {
+                    const nextToken = event.target.value;
+                    setBearerToken(nextToken);
+                    if (server) {
+                      setStoredMcpTestToken(server.id, nextToken);
+                    }
+                  }}
+                  placeholder="Enter the OAuth access token used for protected MCP runtime tests"
                 />
+                <p className="text-xs text-muted-foreground">Stored locally in this browser and reused across MCP runtime tests for this server.</p>
               </>
             ) : null}
           </div>

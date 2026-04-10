@@ -67,3 +67,16 @@ test("backendApiBodySchema accepts a complete API key config", () => {
 
   assert.equal(result.success, true);
 });
+
+test("backendApiBodySchema requires a token exchange audience when enabled", () => {
+  const result = backendApiBodySchema.safeParse({
+    ...baseInput,
+    authType: "none",
+    tokenExchangeEnabled: true
+  });
+
+  assert.equal(result.success, false);
+  assert.deepEqual(result.error.issues.map((issue) => issue.path.join(".")), [
+    "tokenExchangeAudience"
+  ]);
+});

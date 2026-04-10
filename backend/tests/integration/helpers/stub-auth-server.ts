@@ -1,5 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
+import { Buffer } from "node:buffer";
 
 type TokenOptions = {
   issuer?: string;
@@ -10,10 +11,22 @@ type TokenOptions = {
   extraClaims?: Record<string, unknown>;
 };
 
+type TokenExchangeRequest = {
+  authorization: string | undefined;
+  params: Record<string, string>;
+};
+
+type TokenExchangeResponse = {
+  status?: number;
+  body?: Record<string, unknown>;
+};
+
 export const createStubAuthServer = async () => {
   const { publicKey, privateKey } = await generateKeyPair("RS256");
   const publicJwk = await exportJWK(publicKey);
   const issuer = "http://127.0.0.1";
+  const tokenExchangeRequests: TokenExchangeRequest[] = [];
+  let tokenExchangeHandler: ((request: TokenExchangeRequest) => TokenExchangeResponse | Promise<TokenExchangeResponse>) | null = null;
 
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     const url = new URL(req.url ?? "/", issuer);
@@ -37,6 +50,31 @@ export const createStubAuthServer = async () => {
       return;
     }
 
+    if (url.pathname === "/token" && req.method === "POST") {
+      const chunks: Buffer[] = [];
+      req.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+      await new Promise<void>((resolve) => req.on("end", () => resolve()));
+      const bodyText = Buffer.concat(chunks).toString("utf8");
+      const params = Object.fromEntries(new URLSearchParams(bodyText).entries());
+      const requestPayload = {
+        authorization: typeof req.headers.authorization === "string" ? req.headers.authorization : undefined,
+        params
+      };
+      tokenExchangeRequests.push(requestPayload);
+
+      const custom = tokenExchangeHandler ? await tokenExchangeHandler(requestPayload) : null;
+      const responseBody = custom?.body ?? {
+        access_token: "stub-exchanged-access-token",
+        token_type: "Bearer",
+        expires_in: 300,
+        scope: params.scope ?? ""
+      };
+      res.statusCode = custom?.status ?? 200;
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify(responseBody));
+      return;
+    }
+
     res.statusCode = 404;
     res.setHeader("content-type", "application/json");
     res.end(JSON.stringify({ error: "not_found" }));
@@ -56,6 +94,11 @@ export const createStubAuthServer = async () => {
   return {
     issuer: baseUrl,
     jwksUri: `${baseUrl}/.well-known/jwks.json`,
+    tokenEndpoint: `${baseUrl}/token`,
+    tokenExchangeRequests,
+    onTokenExchange(handler: (request: TokenExchangeRequest) => TokenExchangeResponse | Promise<TokenExchangeResponse>) {
+      tokenExchangeHandler = handler;
+    },
     async issueToken(options: TokenOptions = {}) {
       const now = Math.floor(Date.now() / 1000);
       const jwt = new SignJWT({

@@ -44,4 +44,14 @@ Importing an OpenAPI definition does not remove the need for curation. Not every
 - use scopes and secrets to control runtime access
 - validate before every publish
 
+## Example specs in this repository
+
+The repository includes small checked-in OpenAPI examples under `examples/openapi/`:
+
+- `jsonplaceholder-posts.openapi.json` for CRUD-style tool generation
+- `open-meteo-forecast.openapi.json` for query-parameter preview and resource import
+- `ipinfo-lite.openapi.json` for a simple API-key-backed lookup flow
+
+Today, query, header, and cookie parameters are imported into backend resources but are not yet auto-exposed as MCP tool inputs. In practice, that means examples like Open-Meteo are useful for previewing and importing structure, while examples like JSONPlaceholder and IPinfo are better suited for end-to-end generated tool tests.
+
 </section>

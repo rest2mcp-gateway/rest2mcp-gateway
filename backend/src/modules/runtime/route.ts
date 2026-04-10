@@ -62,10 +62,6 @@ export const runtimeRoutes: FastifyPluginAsync = async (app) => {
           }
         );
 
-        if (authPayload) {
-          (request.raw as typeof request.raw & { auth?: unknown }).auth = authPayload;
-        }
-
         const runtimeRequest =
           request.body && typeof request.body === "object" && !Array.isArray(request.body)
             ? request.body as Record<string, unknown>
@@ -80,7 +76,7 @@ export const runtimeRoutes: FastifyPluginAsync = async (app) => {
             const runtimeTool = runtimeServer.toolsByName.get(toolName);
             if (runtimeTool) {
               ensureTokenHasScopes(
-                authPayload,
+                authPayload.payload,
                 runtimeTool.requiredScopes,
                 request,
                 params.serverSlug
@@ -89,7 +85,7 @@ export const runtimeRoutes: FastifyPluginAsync = async (app) => {
           }
         }
 
-        const server = runtimeService.createSdkServer(app, runtimeServer);
+        const server = runtimeService.createSdkServer(app, runtimeServer, authPayload);
         const transport = new StreamableHTTPServerTransport({});
         transport.onclose = () => {};
 

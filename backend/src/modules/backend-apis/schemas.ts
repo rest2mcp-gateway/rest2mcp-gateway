@@ -14,6 +14,8 @@ const backendApiBaseSchema = z.object({
   apiKeyLocation: z.enum(["header", "query"]).optional(),
   apiKeyName: z.string().min(1).optional(),
   apiKeyValue: z.string().min(1).optional(),
+  tokenExchangeEnabled: z.boolean().default(false),
+  tokenExchangeAudience: z.string().min(1).optional(),
   bearerToken: z.string().min(1).optional(),
   basicUsername: z.string().min(1).optional(),
   basicPassword: z.string().min(1).optional(),
@@ -52,9 +54,25 @@ export const backendApiBodySchema = backendApiBaseSchema.superRefine((value, ctx
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["basicPassword"], message: "Basic auth password is required" });
     }
   }
+
+  if (value.tokenExchangeEnabled && !value.tokenExchangeAudience) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["tokenExchangeAudience"],
+      message: "Token exchange audience is required"
+    });
+  }
 });
 
-export const backendApiUpdateSchema = backendApiBaseSchema.partial().omit({ organizationId: true });
+export const backendApiUpdateSchema = backendApiBaseSchema.partial().omit({ organizationId: true }).superRefine((value, ctx) => {
+  if (value.tokenExchangeEnabled === true && !value.tokenExchangeAudience) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["tokenExchangeAudience"],
+      message: "Token exchange audience is required when enabling token exchange"
+    });
+  }
+});
 export const backendApiListQuerySchema = paginationSchema.extend({
   organizationId: z.string().uuid().optional()
 });

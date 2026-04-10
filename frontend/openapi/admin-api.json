@@ -1024,6 +1024,13 @@
                             "type": "string",
                             "nullable": true
                           },
+                          "tokenExchangeEnabled": {
+                            "type": "boolean"
+                          },
+                          "tokenExchangeAudience": {
+                            "type": "string",
+                            "nullable": true
+                          },
                           "bearerToken": {
                             "type": "string",
                             "nullable": true
@@ -1079,6 +1086,7 @@
                           "defaultBaseUrl",
                           "authType",
                           "authConfig",
+                          "tokenExchangeEnabled",
                           "defaultTimeoutMs",
                           "retryPolicy",
                           "isActive"
@@ -1194,6 +1202,14 @@
                     "minLength": 1
                   },
                   "apiKeyValue": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "tokenExchangeEnabled": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "tokenExchangeAudience": {
                     "type": "string",
                     "minLength": 1
                   },
@@ -1314,6 +1330,13 @@
                           "type": "string",
                           "nullable": true
                         },
+                        "tokenExchangeEnabled": {
+                          "type": "boolean"
+                        },
+                        "tokenExchangeAudience": {
+                          "type": "string",
+                          "nullable": true
+                        },
                         "bearerToken": {
                           "type": "string",
                           "nullable": true
@@ -1369,6 +1392,7 @@
                         "defaultBaseUrl",
                         "authType",
                         "authConfig",
+                        "tokenExchangeEnabled",
                         "defaultTimeoutMs",
                         "retryPolicy",
                         "isActive"
@@ -1441,6 +1465,14 @@
                     "minLength": 1
                   },
                   "apiKeyValue": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "tokenExchangeEnabled": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "tokenExchangeAudience": {
                     "type": "string",
                     "minLength": 1
                   },
@@ -1566,6 +1598,13 @@
                           "type": "string",
                           "nullable": true
                         },
+                        "tokenExchangeEnabled": {
+                          "type": "boolean"
+                        },
+                        "tokenExchangeAudience": {
+                          "type": "string",
+                          "nullable": true
+                        },
                         "bearerToken": {
                           "type": "string",
                           "nullable": true
@@ -1621,6 +1660,7 @@
                         "defaultBaseUrl",
                         "authType",
                         "authConfig",
+                        "tokenExchangeEnabled",
                         "defaultTimeoutMs",
                         "retryPolicy",
                         "isActive"
@@ -1995,6 +2035,13 @@
                               "type": "string",
                               "nullable": true
                             },
+                            "tokenExchangeEnabled": {
+                              "type": "boolean"
+                            },
+                            "tokenExchangeAudience": {
+                              "type": "string",
+                              "nullable": true
+                            },
                             "bearerToken": {
                               "type": "string",
                               "nullable": true
@@ -2050,6 +2097,7 @@
                             "defaultBaseUrl",
                             "authType",
                             "authConfig",
+                            "tokenExchangeEnabled",
                             "defaultTimeoutMs",
                             "retryPolicy",
                             "isActive"
@@ -5592,6 +5640,22 @@
                           "type": "string",
                           "format": "uri"
                         },
+                        "tokenEndpoint": {
+                          "type": "string",
+                          "format": "uri",
+                          "nullable": true
+                        },
+                        "clientId": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "clientSecret": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "hasClientSecret": {
+                          "type": "boolean"
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time"
@@ -5637,6 +5701,18 @@
                   "jwksUri": {
                     "type": "string",
                     "format": "uri"
+                  },
+                  "tokenEndpoint": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "clientId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "clientSecret": {
+                    "type": "string",
+                    "minLength": 1
                   }
                 },
                 "required": [
@@ -5674,6 +5750,22 @@
                         "jwksUri": {
                           "type": "string",
                           "format": "uri"
+                        },
+                        "tokenEndpoint": {
+                          "type": "string",
+                          "format": "uri",
+                          "nullable": true
+                        },
+                        "clientId": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "clientSecret": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "hasClientSecret": {
+                          "type": "boolean"
                         },
                         "createdAt": {
                           "type": "string",

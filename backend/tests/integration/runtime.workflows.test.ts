@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
 import { createTestApp } from "./helpers/runtime-app.js";
 import { createStubBackend } from "./helpers/stub-backend.js";
 import { createStubAuthServer } from "./helpers/stub-auth-server.js";
@@ -812,6 +813,108 @@ test("serves a protected MCP runtime and validates bearer tokens against a stub 
     } finally {
       await authServer.close();
       await backend.close();
+    }
+  } finally {
+    await handle.close();
+  }
+});
+
+test("injects an exchanged bearer token and API key when a backend API enables token exchange", async () => {
+  const handle = await createTestApp();
+  try {
+    const session = await loginAsBootstrapAdmin(handle.app);
+    const authServer = await createStubAuthServer();
+    const backend = await createStubBackend();
+    try {
+      authServer.onTokenExchange((request) => {
+        assert.equal(
+          request.authorization,
+          `Basic ${Buffer.from("gateway-client:gateway-secret").toString("base64")}`
+        );
+        assert.equal(request.params.grant_type, "urn:ietf:params:oauth:grant-type:token-exchange");
+        assert.equal(request.params.subject_token_type, "urn:ietf:params:oauth:token-type:access_token");
+        assert.equal(request.params.audience, "urn:widgets-backend");
+        assert.equal(request.params.scope, "widgets:read");
+        return {
+          body: {
+            access_token: "downstream-exchanged-token",
+            token_type: "Bearer",
+            expires_in: 300,
+            scope: request.params.scope
+          }
+        };
+      });
+
+      backend.on("POST", "/widgets/widget-token-exchange", async (request) => ({
+        status: 200,
+        body: {
+          ok: true,
+          authorization: request.headers.authorization,
+          apiKey: request.headers["x-api-key"],
+          echoed: request.bodyJson
+        }
+      }));
+
+      await upsertAuthServerConfig(handle.app, session, {
+        issuer: authServer.issuer,
+        jwksUri: authServer.jwksUri,
+        tokenEndpoint: authServer.tokenEndpoint,
+        clientId: "gateway-client",
+        clientSecret: "gateway-secret"
+      });
+      await createRuntimeFixture(handle.app, session, backend.baseUrl, {
+        authType: "api_key",
+        apiKeyLocation: "header",
+        apiKeyName: "x-api-key",
+        apiKeyValue: "static-backend-key",
+        tokenExchangeEnabled: true,
+        tokenExchangeAudience: "urn:widgets-backend"
+      }, {
+        accessMode: "protected",
+        audience: "runtime-test-audience",
+        scopeNames: ["widgets:read"]
+      });
+      await validateAndPublish(handle.app, session);
+
+      const callerToken = await authServer.issueToken({
+        audience: "runtime-test-audience",
+        scope: "widgets:read",
+        subject: "agent-123"
+      });
+
+      const result = await callRuntime(handle.app, session, {
+        jsonrpc: "2.0",
+        id: 7,
+        method: "tools/call",
+        params: {
+          name: "echo_widget",
+          arguments: {
+            widgetId: "widget-token-exchange",
+            name: "Token Exchange",
+            count: 11,
+            tags: ["exchange", "api-key"]
+          }
+        }
+      }, "public-runtime-server", callerToken);
+
+      assert.equal(authServer.tokenExchangeRequests.length, 1);
+      assert.equal(authServer.tokenExchangeRequests[0]?.params.subject_token, callerToken);
+      assert.equal(backend.requests.length, 1);
+      assert.equal(backend.requests[0]?.headers.authorization, "Bearer downstream-exchanged-token");
+      assert.equal(backend.requests[0]?.headers["x-api-key"], "static-backend-key");
+      assert.deepEqual(result.result.structuredContent, {
+        ok: true,
+        authorization: "Bearer downstream-exchanged-token",
+        apiKey: "static-backend-key",
+        echoed: {
+          message: "hello Token Exchange",
+          count: 11,
+          tags: ["exchange", "api-key"]
+        }
+      });
+    } finally {
+      await backend.close();
+      await authServer.close();
     }
   } finally {
     await handle.close();

@@ -48,10 +48,16 @@ CREATE TABLE IF NOT EXISTS auth_server_configs (
   organization_id uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   issuer text NOT NULL,
   jwks_uri text NOT NULL,
+  token_endpoint text,
+  client_id text,
+  encrypted_client_secret text,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE auth_server_configs DROP COLUMN IF EXISTS authorization_server_metadata_url;
+ALTER TABLE auth_server_configs ADD COLUMN IF NOT EXISTS token_endpoint text;
+ALTER TABLE auth_server_configs ADD COLUMN IF NOT EXISTS client_id text;
+ALTER TABLE auth_server_configs ADD COLUMN IF NOT EXISTS encrypted_client_secret text;
 CREATE UNIQUE INDEX IF NOT EXISTS auth_server_configs_org_idx ON auth_server_configs (organization_id);
 
 CREATE TABLE IF NOT EXISTS users (
@@ -78,12 +84,16 @@ CREATE TABLE IF NOT EXISTS backend_apis (
   default_base_url text NOT NULL,
   auth_type backend_auth_type NOT NULL DEFAULT 'none',
   auth_config jsonb NOT NULL DEFAULT '{}'::jsonb,
+  token_exchange_enabled boolean NOT NULL DEFAULT false,
+  token_exchange_audience text,
   default_timeout_ms integer NOT NULL DEFAULT 30000,
   retry_policy jsonb NOT NULL DEFAULT '{"retries":0}'::jsonb,
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE backend_apis ADD COLUMN IF NOT EXISTS token_exchange_enabled boolean NOT NULL DEFAULT false;
+ALTER TABLE backend_apis ADD COLUMN IF NOT EXISTS token_exchange_audience text;
 CREATE UNIQUE INDEX IF NOT EXISTS backend_apis_org_slug_idx ON backend_apis (organization_id, slug);
 CREATE INDEX IF NOT EXISTS backend_apis_org_idx ON backend_apis (organization_id);
 

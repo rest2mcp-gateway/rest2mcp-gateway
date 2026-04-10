@@ -5,6 +5,10 @@ import { ListToolsRequestSchema, CallToolRequestSchema } from "@modelcontextprot
 import { AppError } from "../../lib/errors.js";
 import { decryptSecret } from "../../lib/crypto.js";
 import { runtimeRepository } from "./repository.js";
+import {
+  exchangeRuntimeAccessToken,
+  type ValidatedRuntimeAccessToken
+} from "./auth.js";
 
 const MCP_PROTOCOL_VERSION = "2024-11-05";
 
@@ -15,6 +19,9 @@ type SnapshotAuthServerConfig = {
   organizationId: string;
   issuer: string;
   jwksUri: string;
+  tokenEndpoint: string | null;
+  clientId: string | null;
+  encryptedClientSecret: string | null;
 };
 
 export type SnapshotBackendApi = {
@@ -26,6 +33,8 @@ export type SnapshotBackendApi = {
   defaultBaseUrl: string;
   authType: string;
   authConfig: JsonObject;
+  tokenExchangeEnabled: boolean;
+  tokenExchangeAudience: string | null;
   defaultTimeoutMs: number;
   retryPolicy: JsonObject;
   isActive: boolean;
@@ -474,6 +483,32 @@ export const redactUrlForLog = (url: URL, backendApi: SnapshotBackendApi) => {
   return redacted.toString();
 };
 
+const applyTokenExchangeAuth = async (
+  headers: Headers,
+  server: CompiledRuntimeServer,
+  backendApi: SnapshotBackendApi,
+  runtimeAuth: ValidatedRuntimeAccessToken | null
+) => {
+  if (!backendApi.tokenExchangeEnabled) {
+    return;
+  }
+
+  if (!backendApi.tokenExchangeAudience) {
+    throw new AppError(
+      500,
+      "Token exchange audience is missing for backend API",
+      "runtime_token_exchange_missing_audience"
+    );
+  }
+
+  const exchangedToken = await exchangeRuntimeAccessToken(
+    server.authServerConfig,
+    backendApi.tokenExchangeAudience,
+    runtimeAuth
+  );
+  headers.set("authorization", `Bearer ${exchangedToken}`);
+};
+
 export const compileSnapshot = (
   organizationSlug: string,
   snapshot: RuntimeSnapshot
@@ -628,7 +663,8 @@ const callBackend = async (
   app: FastifyInstance,
   server: CompiledRuntimeServer,
   runtimeTool: CompiledRuntimeTool,
-  input: JsonObject
+  input: JsonObject,
+  runtimeAuth: ValidatedRuntimeAccessToken | null
 ) => {
   const requestId = randomUUID();
   const traceId = randomUUID();
@@ -651,6 +687,7 @@ const callBackend = async (
   }
 
   applyAuthConfig(url, headers, backendApi);
+  await applyTokenExchangeAuth(headers, server, backendApi, runtimeAuth);
   const loggedUrl = redactUrlForLog(url, backendApi);
 
   const retries = Math.max(
@@ -818,7 +855,8 @@ export const runtimeService = {
     app: FastifyInstance,
     serverSlug: string,
     toolName: string,
-    rawArguments: unknown
+    rawArguments: unknown,
+    runtimeAuth: ValidatedRuntimeAccessToken | null = null
   ) {
     const runtimeServer = await this.getServer(app, serverSlug);
     const runtimeTool = runtimeServer.toolsByName.get(toolName);
@@ -826,7 +864,7 @@ export const runtimeService = {
       throw new AppError(404, `Tool ${toolName} not found`, "tool_not_found");
     }
 
-    return callBackend(app, runtimeServer, runtimeTool, normalizeToolArguments(rawArguments));
+    return callBackend(app, runtimeServer, runtimeTool, normalizeToolArguments(rawArguments), runtimeAuth);
   },
 
   invalidateOrganizationCache(organizationSlug: string) {
@@ -835,7 +873,8 @@ export const runtimeService = {
 
   createSdkServer(
     app: FastifyInstance,
-    runtimeServer: CompiledRuntimeServer
+    runtimeServer: CompiledRuntimeServer,
+    runtimeAuth: ValidatedRuntimeAccessToken | null = null
   ) {
     const server = new Server(
       {
@@ -860,7 +899,8 @@ export const runtimeService = {
         app,
         runtimeServer.server.slug,
         request.params.name,
-        request.params.arguments
+        request.params.arguments,
+        runtimeAuth
       )
     );
 

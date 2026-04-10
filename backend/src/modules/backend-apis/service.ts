@@ -20,6 +20,8 @@ type BackendApiInput = {
   apiKeyLocation?: "header" | "query" | undefined;
   apiKeyName?: string | undefined;
   apiKeyValue?: string | undefined;
+  tokenExchangeEnabled?: boolean | undefined;
+  tokenExchangeAudience?: string | undefined;
   bearerToken?: string | undefined;
   basicUsername?: string | undefined;
   basicPassword?: string | undefined;
@@ -147,20 +149,42 @@ const buildDependencyMessage = (
 
 const buildPersistedValues = (
   input: BackendApiInput,
-  existing?: { authType: string; authConfig: unknown }
-) =>
-  stripUndefined({
+  existing?: { authType: string; authConfig: unknown; tokenExchangeEnabled?: boolean | null; tokenExchangeAudience?: string | null }
+) => {
+  const authType = input.authType ?? existing?.authType ?? "none";
+  const tokenExchangeEnabled = input.tokenExchangeEnabled ?? existing?.tokenExchangeEnabled ?? false;
+  const tokenExchangeAudience =
+    tokenExchangeEnabled
+      ? normalizeNonEmpty(input.tokenExchangeAudience) ?? normalizeNonEmpty(existing?.tokenExchangeAudience)
+      : null;
+
+  if (tokenExchangeEnabled && !tokenExchangeAudience) {
+    throw new AppError(400, "Token exchange requires a backend audience", "backend_api_token_exchange_invalid");
+  }
+
+  if (tokenExchangeEnabled && ["bearer", "basic", "oauth2"].includes(authType)) {
+    throw new AppError(
+      400,
+      "Token exchange can only be combined with none or API key auth",
+      "backend_api_token_exchange_unsupported_combination"
+    );
+  }
+
+  return stripUndefined({
     organizationId: input.organizationId,
     name: input.name,
     slug: input.slug,
     description: input.description,
     defaultBaseUrl: input.defaultBaseUrl,
-    authType: input.authType ?? existing?.authType ?? "none",
+    authType,
     authConfig: buildAuthConfig(input, existing),
+    tokenExchangeEnabled,
+    tokenExchangeAudience,
     defaultTimeoutMs: input.defaultTimeoutMs,
     retryPolicy: input.retryPolicy,
     isActive: input.isActive
   });
+};
 
 export const backendApiService = {
   list: backendApiRepository.list,

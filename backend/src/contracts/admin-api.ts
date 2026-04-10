@@ -59,6 +59,8 @@ export const backendApiSchema = z.object({
   apiKeyValue: z.string().nullable().optional(),
   hasApiKeyValue: z.boolean().optional(),
   apiKeyMaskedValue: z.string().nullable().optional(),
+  tokenExchangeEnabled: z.boolean(),
+  tokenExchangeAudience: z.string().nullable().optional(),
   bearerToken: z.string().nullable().optional(),
   hasBearerToken: z.boolean().optional(),
   basicUsername: z.string().nullable().optional(),
@@ -110,6 +112,10 @@ export const authServerConfigSchema = z.object({
   organizationId: uuidSchema.optional(),
   issuer: z.string().url(),
   jwksUri: z.string().url(),
+  tokenEndpoint: z.string().url().nullable().optional(),
+  clientId: z.string().nullable().optional(),
+  clientSecret: z.string().nullable().optional(),
+  hasClientSecret: z.boolean().optional(),
   createdAt: timestampSchema.optional(),
   updatedAt: timestampSchema.optional()
 });

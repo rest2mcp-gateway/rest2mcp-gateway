@@ -1,0 +1,87 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "IPinfo Lite Example",
+    "version": "1.0.0",
+    "description": "Example OpenAPI document for importing a simple IP lookup endpoint into Rest2MC Gateway."
+  },
+  "servers": [
+    {
+      "url": "https://api.ipinfo.io"
+    }
+  ],
+  "paths": {
+    "/lite/{ip}": {
+      "parameters": [
+        {
+          "name": "ip",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "description": "IPv4 or IPv6 address to look up."
+        }
+      ],
+      "get": {
+        "operationId": "lookupIp",
+        "summary": "Lookup IP details",
+        "description": "Returns basic geolocation details for a single IP address.",
+        "responses": {
+          "200": {
+            "description": "IP details returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IpInfoLiteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "tokenAuth": {
+        "type": "apiKey",
+        "in": "query",
+        "name": "token"
+      }
+    },
+    "schemas": {
+      "IpInfoLiteResponse": {
+        "type": "object",
+        "required": [
+          "ip"
+        ],
+        "properties": {
+          "ip": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "loc": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "tokenAuth": []
+    }
+  ]
+}

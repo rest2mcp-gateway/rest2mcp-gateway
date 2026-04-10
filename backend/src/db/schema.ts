@@ -47,6 +47,9 @@ export const authServerConfigs = pgTable("auth_server_configs", {
   organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   issuer: text("issuer").notNull(),
   jwksUri: text("jwks_uri").notNull(),
+  tokenEndpoint: text("token_endpoint"),
+  clientId: text("client_id"),
+  encryptedClientSecret: text("encrypted_client_secret"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date())
 }, (table) => ({
@@ -77,6 +80,8 @@ export const backendApis = pgTable("backend_apis", {
   defaultBaseUrl: text("default_base_url").notNull(),
   authType: backendAuthTypeEnum("auth_type").notNull().default("none"),
   authConfig: jsonb("auth_config").notNull().default({}),
+  tokenExchangeEnabled: boolean("token_exchange_enabled").notNull().default(false),
+  tokenExchangeAudience: text("token_exchange_audience"),
   defaultTimeoutMs: integer("default_timeout_ms").notNull().default(30000),
   retryPolicy: jsonb("retry_policy").notNull().default({ retries: 0 }),
   isActive: boolean("is_active").notNull().default(true),

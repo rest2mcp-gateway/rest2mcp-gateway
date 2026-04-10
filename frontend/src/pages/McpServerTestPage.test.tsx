@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { Route, Routes } from "react-router-dom";
 import McpServerTestPage from "@/pages/McpServerTestPage";
 import { setStoredSession } from "@/lib/auth";
+import { setStoredMcpTestToken } from "@/lib/mcp-test-token";
 import { buildStoredSession } from "@/test/fixtures";
 import { renderWithProviders } from "@/test/render";
 
@@ -26,8 +27,9 @@ const buildPaginated = <T,>(items: T[]) => ({
 });
 
 describe("McpServerTestPage", () => {
-  it("shows the bearer token field for protected servers and renders initialize responses", async () => {
+  it("shows the saved OAuth token field for protected servers and renders initialize responses", async () => {
     setStoredSession(buildStoredSession());
+    setStoredMcpTestToken("server-1", "saved-runtime-token");
 
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
@@ -49,7 +51,7 @@ describe("McpServerTestPage", () => {
         ]));
       }
       if (url === "http://localhost:3000/mcp/posts-server") {
-        expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer runtime-token");
+        expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer saved-runtime-token");
         expect(init?.body).toBe(JSON.stringify({
           jsonrpc: "2.0",
           id: 1,
@@ -100,12 +102,75 @@ describe("McpServerTestPage", () => {
     expect(
       screen.getByDisplayValue(/"method": "tools\/list"/)
     ).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("saved-runtime-token")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText(/Bearer Token/i), {
-      target: { value: "runtime-token" }
-    });
     fireEvent.click(screen.getByRole("button", { name: "Test Initialize" }));
 
     expect(await screen.findByDisplayValue(/Posts Server/)).toBeInTheDocument();
+  });
+
+  it("reuses a stored OAuth access token for tools/list requests", async () => {
+    setStoredSession(buildStoredSession());
+    setStoredMcpTestToken("server-1", "stored-oauth-token");
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/mcp-servers")) {
+        return Response.json(buildPaginated([
+          {
+            id: "server-1",
+            organizationId: "org-1",
+            name: "Posts Server",
+            slug: "posts-server",
+            version: "1.0.0",
+            title: "Posts Server",
+            description: null,
+            authMode: "local",
+            accessMode: "protected",
+            audience: "studio",
+            isActive: true
+          }
+        ]));
+      }
+      if (url === "http://localhost:3000/mcp/posts-server") {
+        expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer stored-oauth-token");
+        expect(init?.body).toBe(JSON.stringify({
+          jsonrpc: "2.0",
+          id: 2,
+          method: "tools/list",
+          params: {}
+        }));
+        return new Response(JSON.stringify({
+          jsonrpc: "2.0",
+          id: 2,
+          result: {
+            tools: [
+              { name: "getpost" }
+            ]
+          }
+        }), {
+          status: 200,
+          headers: { "content-type": "application/json" }
+        });
+      }
+
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/mcp-servers/:id/test" element={<McpServerTestPage />} />
+      </Routes>,
+      {
+        route: "/mcp-servers/server-1/test"
+      }
+    );
+
+    expect(await screen.findByDisplayValue("stored-oauth-token")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Test List Tools" }));
+
+    expect(await screen.findByDisplayValue(/"getpost"/)).toBeInTheDocument();
   });
 });

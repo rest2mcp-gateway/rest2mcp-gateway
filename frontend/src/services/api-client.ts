@@ -63,6 +63,10 @@ const normalizeBackendApiPayload = (data: Partial<BackendApiFormData>) => {
     description: data.description,
     defaultBaseUrl: data.defaultBaseUrl,
     authType: data.authType,
+    tokenExchangeEnabled: data.tokenExchangeEnabled ?? false,
+    ...(data.tokenExchangeEnabled && data.tokenExchangeAudience
+      ? { tokenExchangeAudience: data.tokenExchangeAudience }
+      : {}),
     defaultTimeoutMs: data.defaultTimeoutMs ?? 5000,
     retryPolicy: data.retryPolicy ?? { retries: 0 },
     isActive: data.isActive ?? true
@@ -334,7 +338,19 @@ export const securityApi = {
   saveAuthServer: async (data: AuthServerConfigFormData): Promise<AuthServerConfig> =>
     requestAdmin(adminApiPaths.security.authServer, adminApiPaths.security.authServer, {
       method: "put",
-      body: data
+      body: {
+        issuer: data.issuer,
+        jwksUri: data.jwksUri,
+        ...(data.tokenEndpoint && data.tokenEndpoint.trim().length > 0
+          ? { tokenEndpoint: data.tokenEndpoint.trim() }
+          : {}),
+        ...(data.clientId && data.clientId.trim().length > 0
+          ? { clientId: data.clientId.trim() }
+          : {}),
+        ...(data.clientSecret && data.clientSecret.trim().length > 0
+          ? { clientSecret: data.clientSecret }
+          : {})
+      } as AuthServerConfigFormData
     })
 };
 

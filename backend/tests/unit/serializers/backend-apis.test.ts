@@ -22,6 +22,8 @@ test("serializeBackendApi masks api_key secrets and exposes helper fields", () =
   assert.equal(serialized.apiKeyName, "api_key");
   assert.equal(serialized.hasApiKeyValue, true);
   assert.equal(serialized.apiKeyMaskedValue, "••••");
+  assert.equal(serialized.tokenExchangeEnabled, false);
+  assert.equal(serialized.tokenExchangeAudience, null);
 });
 
 test("serializeBackendApi exposes basic auth username and password presence only", () => {
@@ -61,4 +63,16 @@ test("serializeBackendApi exposes bearer and oauth2 token presence without plain
   assert.deepEqual(oauth.authConfig, { hasAccessToken: true });
   assert.equal(oauth.hasOauth2AccessToken, true);
   assert.equal(oauth.oauth2AccessToken, null);
+});
+
+test("serializeBackendApi exposes token exchange metadata without secrets", () => {
+  const serialized = serializeBackendApi({
+    authType: "none",
+    authConfig: {},
+    tokenExchangeEnabled: true,
+    tokenExchangeAudience: "urn:widgets"
+  });
+
+  assert.equal(serialized.tokenExchangeEnabled, true);
+  assert.equal(serialized.tokenExchangeAudience, "urn:widgets");
 });

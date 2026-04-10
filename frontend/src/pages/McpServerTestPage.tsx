@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Rocket } from "lucide-react";
@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ErrorState, FieldLabel, LoadingState, PageHeader } from "@/components/shared";
+import { getStoredMcpTestToken, setStoredMcpTestToken } from "@/lib/mcp-test-token";
 
 const prettyJson = (value: unknown) => JSON.stringify(value, null, 2);
 const initializePayload = {
@@ -47,6 +48,14 @@ export default function McpServerTestPage() {
   });
 
   const server = serverQuery.data;
+
+  useEffect(() => {
+    if (!server) {
+      return;
+    }
+
+    setBearerToken(getStoredMcpTestToken(server.id));
+  }, [server]);
 
   const initializeMutation = useMutation({
     mutationFn: async () => {
@@ -139,14 +148,21 @@ export default function McpServerTestPage() {
       {server?.accessMode === "protected" ? (
         <Card className="mb-6">
           <CardContent className="p-5 space-y-2">
-            <FieldLabel htmlFor="mcp-server-test-bearer-token" required>Bearer Token</FieldLabel>
+            <FieldLabel htmlFor="mcp-server-test-bearer-token" required>Test OAuth Access Token</FieldLabel>
             <Input
               id="mcp-server-test-bearer-token"
               type="password"
               value={bearerToken}
-              onChange={(event) => setBearerToken(event.target.value)}
-              placeholder="Enter an access token for this protected MCP server"
+              onChange={(event) => {
+                const nextToken = event.target.value;
+                setBearerToken(nextToken);
+                if (server) {
+                  setStoredMcpTestToken(server.id, nextToken);
+                }
+              }}
+              placeholder="Enter the OAuth access token used for protected MCP runtime tests"
             />
+            <p className="text-xs text-muted-foreground">Stored locally in this browser and reused for initialize, list tools, and tool tests for this server.</p>
           </CardContent>
         </Card>
       ) : null}
