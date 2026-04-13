@@ -8,7 +8,7 @@ description: Import existing API definitions into Rest2MC Gateway.
 
 # OpenAPI Import
 
-For many teams, the fastest way to onboard an existing API into Rest2MC Gateway is to start from an OpenAPI definition.
+For many teams, the fastest way to onboard an internal API into Rest2MC Gateway is to start from an OpenAPI definition.
 
 ## Why import from OpenAPI
 
@@ -20,7 +20,7 @@ OpenAPI import helps accelerate the earliest stage of setup:
 
 ## Typical use
 
-Use OpenAPI import when you already have a documented REST API and want to bring its structure into the gateway as the basis for further configuration.
+Use OpenAPI import when you already have a documented REST API and want to bring its structure into the gateway as the basis for further configuration and internal MCP testing.
 
 ## Recommended workflow
 

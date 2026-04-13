@@ -8,7 +8,7 @@ description: The main objects and relationships inside Rest2MC Gateway.
 
 # Core Concepts
 
-Rest2MC Gateway is built around the path from an existing REST capability to a published MCP tool. The main concepts below describe that model.
+Rest2MC Gateway is built around the path from an internal REST capability to a published MCP tool. The main concepts below describe that model.
 
 ## Organization
 
@@ -20,7 +20,7 @@ Users access the admin experience and operate the gateway. A bootstrap admin can
 
 ## Backend APIs
 
-A backend API represents an external or internal REST API you want to expose through MCP. It is the source system behind the gateway.
+A backend API represents a REST API you want to expose through MCP. In the current product positioning, the primary target is internal APIs used for development, testing, and controlled internal access.
 
 ## Backend resources
 

@@ -1,14 +1,14 @@
 ---
 layout: default
 title: Getting Started
-description: First local setup and first publish workflow for Rest2MC Gateway.
+description: First local setup and first publish workflow for a lightweight self-hosted MCP gateway.
 ---
 
 <section class="docs-page">
 
 # Getting Started
 
-This guide gets Rest2MC Gateway running locally and walks through the first publish flow.
+This guide gets Rest2MC Gateway running locally and walks through the first publish flow for development, testing, and controlled internal use.
 
 ## What you get locally
 

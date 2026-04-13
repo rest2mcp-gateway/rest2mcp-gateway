@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Deployment
-description: Production-style deployment guidance for Rest2MC Gateway.
+description: Deployment guidance for self-hosted development, testing, and controlled internal use.
 ---
 
 <section class="docs-page">
@@ -10,9 +10,13 @@ description: Production-style deployment guidance for Rest2MC Gateway.
 
 This guide covers the basics of running Rest2MC Gateway beyond local development.
 
-## Production priorities
+## Deployment scope
 
-In production, the main concerns are stability, explicit secrets, and predictable runtime configuration.
+Rest2MC Gateway is currently positioned for self-hosted development, testing, and controlled internal use. This page covers the practical basics for running it outside a local dev shell. It is not a full enterprise edge-gateway operations guide.
+
+## Runtime priorities
+
+Outside local development, the main concerns are stability, explicit secrets, and predictable runtime configuration.
 
 At minimum:
 
@@ -45,6 +49,6 @@ npm start
 
 ## Recommended next step
 
-For production documentation, add a deployment guide specific to your environment, including secret injection, backups, database provisioning, and release workflow.
+For an internal deployment, add a guide specific to your environment, including secret injection, backups, database provisioning, and release workflow.
 
 </section>

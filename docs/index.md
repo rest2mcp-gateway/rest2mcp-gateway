@@ -1,14 +1,14 @@
 ---
 layout: default
 title: Home
-description: Rest2MC Gateway is a no-code gateway for publishing MCP servers and tools over existing REST APIs.
+description: A lightweight self-hosted gateway for turning internal REST APIs into MCP servers for development, testing, and controlled internal use.
 ---
 
 <section class="hero">
   <span class="eyebrow">Rest APIs to MCP</span>
-  <h1>Publish MCP servers on top of the APIs you already own.</h1>
+  <h1>Publish MCP servers on top of the internal APIs you already own.</h1>
   <p class="lead">
-    Rest2MC Gateway gives product and platform teams a faster path from existing REST endpoints to MCP-compatible servers and tools, without building one-off wrappers for every integration.
+    Rest2MC Gateway is a lightweight self-hosted gateway for turning internal REST APIs into MCP servers for development, testing, and controlled internal use.
   </p>
   <div class="button-row">
     <a class="button primary" href="{{ '/getting-started/' | relative_url }}">Get started</a>
@@ -20,7 +20,7 @@ description: Rest2MC Gateway is a no-code gateway for publishing MCP servers and
   <section class="card">
     <div class="kicker">No-code publishing</div>
     <h2>Configure, map, validate, publish</h2>
-    <p>Define how your existing backend APIs become MCP tools through a managed workflow instead of custom integration code.</p>
+    <p>Define how your existing internal APIs become MCP tools through a managed workflow instead of custom integration code.</p>
   </section>
   <section class="card">
     <div class="kicker">Operational control</div>
@@ -38,9 +38,11 @@ description: Rest2MC Gateway is a no-code gateway for publishing MCP servers and
 
 ## What Rest2MC Gateway is for
 
-Rest2MC Gateway is a product for teams that want to expose existing REST-based capabilities to MCP clients quickly and consistently. Instead of writing a custom MCP layer for every backend system, you use the gateway to define MCP servers, tools, mappings, policies, and publishing state through a single admin experience.
+Rest2MC Gateway is for teams that want to expose internal REST-based capabilities to MCP clients quickly and consistently. Instead of writing a custom MCP layer for every backend system, you use the gateway to define MCP servers, tools, mappings, policies, and publishing state through a single admin experience.
 
-The result is a shorter path from API inventory to usable MCP tooling.
+The result is a shorter path from internal API inventory to usable MCP tooling in local, staging, and controlled internal environments.
+
+It is not positioned as a full enterprise edge gateway or general API-management replacement.
 
 ## Documentation
 

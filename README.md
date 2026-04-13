@@ -1,29 +1,33 @@
 # Rest2MC Gateway
 
-Rest2MC Gateway helps teams turn existing REST APIs into MCP servers and tools quickly, without building custom glue code for every integration.
+A lightweight self-hosted gateway for turning internal REST APIs into MCP servers for development, testing, and controlled internal use.
 
-It is designed as a no-code gateway for publishing MCP-compatible capabilities on top of the APIs you already have. Instead of hand-coding wrappers, servers, and tool definitions from scratch, you configure how backend endpoints should be exposed, secured, validated, and published through a single admin experience.
+Rest2MC Gateway helps teams turn internal REST APIs into MCP servers and tools quickly, without building custom glue code for every integration.
 
-The goal is simple: shorten the path from an existing REST API to a usable MCP server that agents and clients can consume.
+Status: early-stage (`0.1.0`). Suitable for evaluation, development, testing, and controlled internal use.
+
+It is designed as a self-hosted admin and runtime application for publishing MCP-compatible capabilities on top of APIs you already operate. Instead of hand-coding wrappers, servers, and tool definitions from scratch, you configure how backend endpoints should be exposed, secured, validated, and published through a single admin experience.
+
+The goal is simple: shorten the path from an internal REST API to a usable MCP server that agents and clients can consume in local, staging, and controlled internal environments.
 
 Today, Rest2MC Gateway targets the HTTP-based MCP server model, exposing runtime servers over the [MCP transport specification](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports) using Streamable HTTP. For protected servers, it also supports the [MCP authorization model](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization), including OAuth 2.0 [Protected Resource Metadata](https://datatracker.ietf.org/doc/html/rfc9728) discovery and bearer-token validation against an external authorization server described by [OAuth 2.0 Authorization Server Metadata](https://datatracker.ietf.org/doc/html/rfc8414). In practice, that means this gateway focuses on HTTP runtime interoperability and OAuth-based access control rather than stdio transport or acting as an OAuth authorization server itself.
 
 Current limitations:
 
 - the gateway currently focuses on the Streamable HTTP transport, not stdio
-- the admin and runtime experience is optimized for local development first; production deployment guidance exists in `docs/` and will continue to evolve
+- the admin and runtime experience is optimized for development, testing, and controlled internal use rather than broad internet-facing edge deployment
 - the runtime accepts the MCP Streamable HTTP contract, including `Accept: application/json, text/event-stream`, but the product does not currently provide a separate browser-based SSE session manager or long-lived streaming UX beyond the HTTP runtime surface itself
 
 With Rest2MC Gateway, you can:
 
-- connect existing backend APIs to MCP-facing tools
+- connect internal backend APIs to MCP-facing tools
 - define MCP servers and tool catalogs without custom integration code
 - manage mappings, scopes, secrets, and access rules in one place
 - operate everything through both an admin API and a browser-based admin UI
 
 The repository contains the full product: the admin API, the runtime endpoints, and the admin interface served from the same application.
 
-Today, the default experience is a development-first deployment model: one app process serves the admin UI, the admin API, and the MCP runtime on the same host. The repository already includes deployment-oriented documentation, but the quickest path is still local development with the embedded database and a bootstrap admin account.
+Today, the default experience is a lightweight self-hosted deployment model: one app process serves the admin UI, the admin API, and the MCP runtime on the same host. The repository includes deployment-oriented documentation, but the quickest path is still local development or controlled internal deployment with the embedded database and a bootstrap admin account.
 
 ## How it works
 
@@ -36,7 +40,7 @@ At a high level, Rest2MC Gateway turns an existing REST integration into a publi
 5. Map each tool to the backend resource it should execute.
 6. Configure scopes, secrets, and other runtime settings.
 
-The runtime will serve the MCP-facing configuration and act as an MCP to REST gateway.
+The runtime serves the MCP-facing configuration and acts as an MCP-to-REST translation layer for the internal APIs you publish through it.
 
 ## Getting started
 
