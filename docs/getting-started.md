@@ -24,24 +24,67 @@ When the app is running, you have access to:
 - the MCP runtime endpoints at `/mcp`
 - API documentation at `/docs`
 
+## 0. Clone the repository
+
+```bash
+git clone git@github.com:rest2mcp-gateway/rest2mcp-gateway.git
+cd rest2mcp-gateway
+```
+
 ## 1. Prepare the environment
 
-Copy the sample environment file:
+The quickest setup path uses the checked-in helper scripts to generate a local `.env` file with:
+
+- a random bootstrap admin password
+- a random `SECRET_ENCRYPTION_KEY`
+- the default local host and port values
+
+The scripted path requires `openssl`.
+
+### macOS / Linux
+
+```bash
+sh ./scripts/setup-secret.sh
+```
+
+### Windows PowerShell
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup-secret.ps1
+```
+
+Both scripts print the generated bootstrap password. You will sign in with:
+
+- username: `admin`
+- password: the printed generated password
+
+### Manual fallback
+
+If `openssl` is not available, create `.env` manually instead:
 
 ```bash
 cp .env.example .env
 ```
 
-For an initial local run, the default values are usually enough.
+Then set:
 
-The documented database path is the embedded PGlite store at `./data/db`. Override `PGLITE_DATA_DIR` only if you need a different location.
+- `BOOTSTRAP_ADMIN_PASSWORD` to a strong local password
+- `SECRET_ENCRYPTION_KEY` to a stable secret string of at least 16 characters
 
-Set explicit values for:
+For example:
 
-- `SECRET_ENCRYPTION_KEY`
-- `BOOTSTRAP_ADMIN_PASSWORD`
+```env
+BOOTSTRAP_ADMIN_USERNAME=admin
+BOOTSTRAP_ADMIN_PASSWORD=replace-with-a-strong-password
+SECRET_ENCRYPTION_KEY=replace-with-a-long-stable-secret
+PORT=3000
+HOST=0.0.0.0
+BOOTSTRAP_ADMIN_NAME=Local Admin
+```
 
-On first startup, the app generates its JWT signing secret automatically and stores it encrypted in the database.
+The generated-script path is preferred because it avoids committing or reusing weak local secrets.
+
+On first startup, the app generates its admin JWT signing secret automatically and stores it encrypted in the database using `SECRET_ENCRYPTION_KEY`.
 
 ## 2. Install dependencies
 
@@ -63,15 +106,10 @@ http://localhost:3000
 
 ## 4. Sign in
 
-Use the bootstrap admin username configured in `.env`.
+Use the bootstrap credentials you configured in `.env`:
 
-Default example:
-
-```text
-admin
-```
-
-Use the bootstrap password from `.env`.
+- username: `admin`
+- password: the generated password printed by the setup script, or the manual password you set yourself
 
 ## 5. Create an MCP server for JSONPlaceholder
 
@@ -108,9 +146,10 @@ The importer will create the backend API, backend resources, and tool records.
 
 ## 7. Validate and publish
 
+In development mode, valid draft changes are auto-published. You do not need a separate manual publish step for this walkthrough.
+
 1. Open `Dashboard`.
-2. Run validation on the draft configuration.
-3. Publish the runtime snapshot.
+2. Confirm the draft is valid and that development auto-publish has applied the latest changes.
 
 After publish, the runtime is available under `/mcp/posts`.
 
@@ -232,9 +271,10 @@ Save the backend API.
 
 ## 13. Validate and publish again
 
+In development mode, valid draft changes are auto-published here as well.
+
 1. Open `Dashboard`.
-2. Validate the updated draft.
-3. Publish the new runtime snapshot.
+2. Confirm the updated draft is valid and that the latest changes have been auto-published.
 
 After publish, the runtime is available under `/mcp/ip-lookup`.
 
