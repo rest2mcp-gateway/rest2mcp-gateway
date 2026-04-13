@@ -42,100 +42,41 @@ At a high level, Rest2MC Gateway turns an existing REST integration into a publi
 
 The runtime serves the MCP-facing configuration and acts as an MCP-to-REST translation layer for the internal APIs you publish through it.
 
-## Getting started
-
-### 1. Prepare the environment
-
-Copy the sample environment file:
-
-```bash
-cp .env.example .env
-```
-
-Then set the required values. You can place them in `.env` for local development or provide them through your shell or deployment environment.
+## Quick start
 
 Prerequisites:
 
 - Node.js 22+
 - npm 10+
 
-Notes:
+Copy the sample environment file and set at least:
 
-- The default setup uses the embedded PGlite database so you can get running quickly.
-- `BOOTSTRAP_ADMIN_PASSWORD` must be set so you can sign in as the initial local admin.
-- `SECRET_ENCRYPTION_KEY` must be set and kept stable. It encrypts stored secrets and the internally persisted JWT signing secret, so changing it later will prevent the app from decrypting previously stored values.
-- `BOOTSTRAP_ADMIN_USERNAME` defaults to `admin`, and `BOOTSTRAP_ADMIN_NAME` defaults to `Local Admin`.
-- `HOST` and `PORT` control where the combined UI, admin API, and runtime server listen.
-- The application generates its admin JWT signing secret on first startup and stores it encrypted in the database.
-
-### 2. Install dependencies
+- `BOOTSTRAP_ADMIN_PASSWORD`
+- `SECRET_ENCRYPTION_KEY`
 
 ```bash
+cp .env.example .env
 npm install
-```
-
-### 3. Start the application
-
-```bash
 npm run dev
 ```
 
-This starts Rest2MC Gateway for local development. The browser UI and admin API are available from the same host and port.
-
-### 4. Sign in
-
-Open the app in your browser:
+Then open:
 
 ```text
 http://localhost:3000
 ```
 
-Use the bootstrap admin username from `.env`:
+Use the bootstrap admin username from `.env` or the default `admin`, then sign in with the bootstrap password.
 
-```text
-admin
-```
+For the full walkthrough, including:
 
-Use the bootstrap password from `.env`.
+- importing the sample JSONPlaceholder API
+- testing with the built-in app tester
+- testing with `curl`
+- importing the IPinfo example
+- configuring backend API-key auth
 
-### 5. Publish your first gateway configuration
-
-A typical first run looks like this:
-
-1. Sign in as the bootstrap admin.
-2. Open the OpenAPI import flow.
-3. Import the example spec at [`examples/openapi/jsonplaceholder-posts.openapi.json`](./examples/openapi/jsonplaceholder-posts.openapi.json).
-4. Set the backend base URL to `https://jsonplaceholder.typicode.com`.
-5. Choose or create an MCP server, for example `posts`.
-6. Complete the import so the backend API, resource, and tool are generated.
-7. Validate and publish the draft configuration from the admin UI.
-8. Call the runtime with the generated MCP server slug.
-
-The example spec in [`examples/openapi/jsonplaceholder-posts.openapi.json`](./examples/openapi/jsonplaceholder-posts.openapi.json) covers four common operations from JSONPlaceholder: list posts, get a single post, create a post, and update a post. After import and publish, a minimal runtime test looks like this:
-
-```bash
-curl -X POST http://localhost:3000/mcp/posts \
-  -H 'Content-Type: application/json' \
-  -H 'Accept: application/json, text/event-stream' \
-  -d '{
-    "jsonrpc": "2.0",
-    "id": 1,
-    "method": "tools/call",
-    "params": {
-      "name": "getpost",
-      "arguments": {
-        "id": 1
-      }
-    }
-  }'
-```
-
-Additional checked-in examples:
-
-- [`examples/openapi/open-meteo-forecast.openapi.json`](./examples/openapi/open-meteo-forecast.openapi.json) demonstrates a query-parameter-driven API. It is useful for previewing and importing backend resources, but with the current importer it is not auto-exposable as a tool because query parameters are not yet promoted into tool input schemas.
-- [`examples/openapi/ipinfo-lite.openapi.json`](./examples/openapi/ipinfo-lite.openapi.json) demonstrates a simple path-parameter lookup API that can be exposed as a tool and then configured with backend API-key auth in the gateway.
-
-See [`docs/openapi-import.md`](./docs/openapi-import.md) for the import workflow and [`docs/runtime-publishing.md`](./docs/runtime-publishing.md) for validation, publish, and runtime behavior.
+see [Getting Started](./docs/getting-started.md).
 
 
 ## Useful commands
