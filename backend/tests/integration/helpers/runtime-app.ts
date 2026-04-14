@@ -4,6 +4,8 @@ import { join } from "node:path";
 import type { FastifyInstance } from "fastify";
 import { ZodEffects } from "zod";
 
+const runtimeBaseUrlKey = Symbol("runtimeBaseUrl");
+
 type TestAppHandle = {
   app: FastifyInstance;
   dbRootDir: string;
@@ -59,6 +61,15 @@ export const createTestApp = async (): Promise<TestAppHandle> => {
   const { buildApp } = await import("../../../src/app.js");
   const app = await buildApp();
   await app.ready();
+  await app.listen({ port: 0, host: "127.0.0.1" });
+
+  const address = app.server.address();
+  if (!address || typeof address === "string") {
+    throw new Error("Failed to determine test app address");
+  }
+
+  (app as FastifyInstance & { [runtimeBaseUrlKey]?: string })[runtimeBaseUrlKey] =
+    `http://127.0.0.1:${address.port}`;
 
   return {
     app,
@@ -68,4 +79,13 @@ export const createTestApp = async (): Promise<TestAppHandle> => {
       await rm(dbRootDir, { recursive: true, force: true });
     }
   };
+};
+
+export const getTestAppBaseUrl = (app: FastifyInstance) => {
+  const baseUrl = (app as FastifyInstance & { [runtimeBaseUrlKey]?: string })[runtimeBaseUrlKey];
+  if (!baseUrl) {
+    throw new Error("Test app base URL is not available");
+  }
+
+  return baseUrl;
 };

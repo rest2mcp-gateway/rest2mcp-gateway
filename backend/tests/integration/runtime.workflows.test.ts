@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Buffer } from "node:buffer";
-import { createTestApp } from "./helpers/runtime-app.js";
+import { createTestApp, getTestAppBaseUrl } from "./helpers/runtime-app.js";
 import { createStubBackend } from "./helpers/stub-backend.js";
 import { createStubAuthServer } from "./helpers/stub-auth-server.js";
 import {
@@ -21,6 +21,9 @@ const getResourceMetadataUrl = (wwwAuthenticateHeader: string | undefined) => {
   return match[1];
 };
 
+const getRuntimeResourceUrl = (app: Parameters<typeof getTestAppBaseUrl>[0], serverSlug = "public-runtime-server") =>
+  `${getTestAppBaseUrl(app)}/mcp/${serverSlug}`;
+
 test("publishes a minimal public runtime and exposes discovery plus tools/list", async () => {
   const handle = await createTestApp();
   try {
@@ -32,7 +35,7 @@ test("publishes a minimal public runtime and exposes discovery plus tools/list",
 
       const discovery = await getRuntimeDiscovery(handle.app, session);
       assert.deepEqual(discovery, {
-        resource: "http://localhost/mcp/public-runtime-server",
+        resource: getRuntimeResourceUrl(handle.app),
         authorization_servers: []
       });
 
@@ -645,7 +648,7 @@ test("serves a protected MCP runtime and validates bearer tokens against a stub 
 
       const discovery = await getRuntimeDiscovery(handle.app, session);
       assert.deepEqual(discovery, {
-        resource: "http://localhost/mcp/public-runtime-server",
+        resource: getRuntimeResourceUrl(handle.app),
         authorization_servers: [authServer.issuer],
         resource_name: "Public Runtime Server",
         scopes_supported: ["widgets.read"]
@@ -675,13 +678,10 @@ test("serves a protected MCP runtime and validates bearer tokens against a stub 
           ? unauthorized.response.headers["www-authenticate"]
           : undefined
       );
-      const metadataResponse = await handle.app.inject({
-        method: "GET",
-        url: new URL(metadataUrl).pathname
-      });
-      assert.equal(metadataResponse.statusCode, 200, metadataResponse.body);
-      assert.deepEqual(metadataResponse.json(), {
-        resource: "http://localhost/mcp/public-runtime-server",
+      const metadataResponse = await fetch(metadataUrl);
+      assert.equal(metadataResponse.status, 200);
+      assert.deepEqual(await metadataResponse.json(), {
+        resource: getRuntimeResourceUrl(handle.app),
         authorization_servers: [authServer.issuer],
         resource_name: "Public Runtime Server",
         scopes_supported: ["widgets.read"]

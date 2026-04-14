@@ -27,6 +27,11 @@ type ApiKeyProtection = {
   value: string;
 };
 
+type StubRoute = {
+  path: string;
+  handler: StubHandler;
+};
+
 const stubHttpMethods = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
 type StubHttpMethod = (typeof stubHttpMethods)[number];
 
@@ -49,17 +54,44 @@ const parseBodyJson = (bodyText: string) => {
 };
 
 export const createStubBackend = async () => {
-  const handlers = new Map<StubHttpMethod, Map<string, StubHandler>>();
+  const routesByMethod: Record<StubHttpMethod, StubRoute[]> = {
+    GET: [],
+    POST: [],
+    PUT: [],
+    PATCH: [],
+    DELETE: []
+  };
   const requests: StubRequest[] = [];
 
-  const getRouteHandlers = (method: StubHttpMethod) => {
-    let routeHandlers = handlers.get(method);
-    if (!routeHandlers) {
-      routeHandlers = new Map<string, StubHandler>();
-      handlers.set(method, routeHandlers);
+  const getRoutesForMethod = (method: StubHttpMethod) => {
+    switch (method) {
+      case "GET":
+        return routesByMethod.GET;
+      case "POST":
+        return routesByMethod.POST;
+      case "PUT":
+        return routesByMethod.PUT;
+      case "PATCH":
+        return routesByMethod.PATCH;
+      case "DELETE":
+        return routesByMethod.DELETE;
+    }
+  };
+
+  const registerRoute = (method: StubHttpMethod, path: string, handler: StubHandler) => {
+    const routes = getRoutesForMethod(method);
+    const existingRoute = routes.find((route) => route.path === path);
+    if (existingRoute) {
+      existingRoute.handler = handler;
+      return;
     }
 
-    return routeHandlers;
+    routes.push({ path, handler });
+  };
+
+  const findRoute = (method: StubHttpMethod, pathname: string, path: string) => {
+    const routes = getRoutesForMethod(method);
+    return routes.find((route) => route.path === pathname) ?? routes.find((route) => route.path === path) ?? null;
   };
 
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
@@ -89,16 +121,15 @@ export const createStubBackend = async () => {
     };
     requests.push(recordedRequest);
 
-    const routeHandlers = handlers.get(recordedRequest.method);
-    const handler = routeHandlers?.get(recordedRequest.pathname) ?? routeHandlers?.get(path);
-    if (!handler) {
+    const route = findRoute(recordedRequest.method, recordedRequest.pathname, path);
+    if (!route) {
       res.statusCode = 404;
       res.setHeader("content-type", "application/json");
       res.end(JSON.stringify({ error: "not_found" }));
       return;
     }
 
-    const response = await handler(recordedRequest);
+    const response = await route.handler(recordedRequest);
 
     if (response.delayMs && response.delayMs > 0) {
       await new Promise((resolve) => setTimeout(resolve, response.delayMs));
@@ -141,7 +172,7 @@ export const createStubBackend = async () => {
         throw new Error(`Unsupported stub backend method: ${method}`);
       }
 
-      getRouteHandlers(normalizedMethod).set(path, handler);
+      registerRoute(normalizedMethod, path, handler);
     },
     onApiKeyProtected(
       method: string,
@@ -154,7 +185,7 @@ export const createStubBackend = async () => {
         throw new Error(`Unsupported stub backend method: ${method}`);
       }
 
-      getRouteHandlers(normalizedMethod).set(path, async (request) => {
+      registerRoute(normalizedMethod, path, async (request) => {
         const placement = protection.in ?? "header";
         const actualValue =
           placement === "query"

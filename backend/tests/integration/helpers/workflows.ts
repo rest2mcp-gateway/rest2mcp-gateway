@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
+import { getTestAppBaseUrl } from "./runtime-app.js";
 
 type AdminSession = {
   token: string;
@@ -116,6 +117,48 @@ export const request = async (
       ? parseSseJsonBody(rawBody)
       : response.json();
   return { response, body };
+};
+
+const requestRuntime = async (
+  app: FastifyInstance,
+  {
+    method,
+    url,
+    payload,
+    headers
+  }: {
+    method: "GET" | "POST";
+    url: string;
+    payload?: unknown;
+    headers?: Record<string, string>;
+  }
+) => {
+  const response = await fetch(`${getTestAppBaseUrl(app)}${url}`, {
+    method,
+    headers: {
+      ...(payload !== undefined ? { "content-type": "application/json" } : {}),
+      ...(headers ?? {})
+    },
+    body: payload !== undefined ? JSON.stringify(payload) : undefined
+  });
+
+  const rawBody = await response.text();
+  const contentType = String(response.headers.get("content-type") ?? "");
+  const body =
+    contentType.includes("text/event-stream") || rawBody.startsWith("event:")
+      ? parseSseJsonBody(rawBody)
+      : rawBody
+        ? JSON.parse(rawBody) as unknown
+        : undefined;
+
+  return {
+    response: {
+      statusCode: response.status,
+      headers: Object.fromEntries(response.headers.entries()),
+      body: rawBody
+    },
+    body
+  };
 };
 
 export const adminRequest = async (
@@ -398,7 +441,7 @@ export const getRuntimeDiscovery = async (
   session: AdminSession,
   serverSlug = "public-runtime-server"
 ) => {
-  const result = await request(app, {
+  const result = await requestRuntime(app, {
     method: "GET",
     url: `/.well-known/oauth-protected-resource/mcp/${serverSlug}`
   });
@@ -413,7 +456,7 @@ export const callRuntime = async (
   serverSlug = "public-runtime-server",
   token?: string
 ) => {
-  const result = await request(app, {
+  const result = await requestRuntime(app, {
     method: "POST",
     url: `/mcp/${serverSlug}`,
     payload: body,
@@ -444,7 +487,7 @@ export const callRuntimeRaw = async (
     serverSlug?: string;
     token?: string;
   }
-) => request(app, {
+) => requestRuntime(app, {
   method,
   url: `/mcp/${serverSlug}`,
   payload: body,
