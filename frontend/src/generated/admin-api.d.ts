@@ -1227,7 +1227,6 @@ export interface paths {
                                 name: string;
                                 slug: string;
                                 version: string;
-                                title: string;
                                 description?: string | null;
                                 /** @enum {string} */
                                 authMode: "local" | "oidc";
@@ -1270,7 +1269,6 @@ export interface paths {
                         slug: string;
                         /** @default 1.0.0 */
                         version?: string;
-                        title: string;
                         description?: string;
                         /**
                          * @default local
@@ -1304,7 +1302,6 @@ export interface paths {
                                 name: string;
                                 slug: string;
                                 version: string;
-                                title: string;
                                 description?: string | null;
                                 /** @enum {string} */
                                 authMode: "local" | "oidc";
@@ -1376,7 +1373,6 @@ export interface paths {
                         slug?: string;
                         /** @default 1.0.0 */
                         version?: string;
-                        title?: string;
                         description?: string;
                         /**
                          * @default local
@@ -1410,7 +1406,6 @@ export interface paths {
                                 name: string;
                                 slug: string;
                                 version: string;
-                                title: string;
                                 description?: string | null;
                                 /** @enum {string} */
                                 authMode: "local" | "oidc";

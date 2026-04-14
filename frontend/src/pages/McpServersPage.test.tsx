@@ -44,7 +44,6 @@ describe("McpServersPage", () => {
             name: "Posts Server",
             slug: "posts-server",
             version: "1.0.0",
-            title: "Posts Server",
             description: null,
             authMode: "local",
             accessMode: "public",

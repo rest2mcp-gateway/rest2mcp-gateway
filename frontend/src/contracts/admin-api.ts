@@ -1,8 +1,8 @@
 import type { paths } from "@/generated/admin-api";
 
 export type AdminPath = keyof paths;
-type HttpMethod = "get" | "post" | "put" | "patch" | "delete";
-export type AdminMethod<Path extends AdminPath> = Extract<keyof paths[Path], HttpMethod>;
+type AdminHttpMethod = "get" | "post" | "put" | "patch" | "delete";
+export type AdminMethod<Path extends AdminPath> = Extract<keyof paths[Path], AdminHttpMethod>;
 
 export type Operation<Path extends AdminPath, Method extends AdminMethod<Path>> = NonNullable<paths[Path][Method]>;
 

@@ -43,7 +43,6 @@ const createDraftContext = (): DraftContext => ({
       name: "Public server",
       slug: "public-server",
       version: "1.0.0",
-      title: "Public Server",
       description: null,
       authMode: "local",
       accessMode: "public",

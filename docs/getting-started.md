@@ -116,18 +116,19 @@ Use the bootstrap credentials you configured in `.env`:
 Before importing tools, create the MCP server they will be attached to.
 
 1. Open `MCP Servers`.
-2. Create a server with:
+2. Click `Add Server`.
+3. In the `General` tab, create a server with:
    - name: `Posts`
    - slug: `posts`
    - access mode: `Public`
-3. Save the server.
+4. Leave the default version as `1.0.0`.
+5. Save the server.
 
 You will use this server for the JSONPlaceholder tools.
 
 ## 6. Import the JSONPlaceholder example
-
-1. Open `Backend APIs`.
-2. Open `Import OpenAPI`.
+1. Open the `Posts` server you just created.
+2. Click `Import OpenAPI`.
 3. Use these values:
    - name: `JSONPlaceholder Posts`
    - slug: `jsonplaceholder-posts`
@@ -168,10 +169,10 @@ There are two useful test paths in the UI.
 This confirms the runtime is reachable and that the server exposes the imported tools.
 
 ### Tool test
-
-1. From the same MCP server detail page, find the `getpost` tool.
-2. Click `Test`.
-3. Leave the generated request body in place or set:
+1. Return to the `Posts` MCP server detail page.
+2. Open the `Tools` tab.
+3. Find the `getpost` tool and click `Test`.
+4. Leave the generated request body in place or set:
 
 ```json
 {
@@ -187,7 +188,7 @@ This confirms the runtime is reachable and that the server exposes the imported 
 }
 ```
 
-4. Click `Run Tool Test`.
+5. Click `Run Tool Test`.
 
 The response should include the JSONPlaceholder post with `id: 1`.
 

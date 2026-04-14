@@ -97,7 +97,6 @@ export const mcpServerSchema = z.object({
   name: z.string().min(1),
   slug: z.string().min(1),
   version: z.string().min(1),
-  title: z.string().min(1),
   description: z.string().nullable().optional(),
   authMode: z.enum(["local", "oidc"]),
   accessMode: z.enum(["public", "protected"]),

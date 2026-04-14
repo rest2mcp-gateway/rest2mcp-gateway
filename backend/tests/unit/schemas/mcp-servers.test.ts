@@ -5,8 +5,7 @@ import { mcpServerBodySchema } from "../../../src/modules/mcp-servers/schemas.js
 const baseInput = {
   organizationId: "11111111-1111-1111-1111-111111111111",
   name: "Public server",
-  slug: "public-server",
-  title: "Public Server"
+  slug: "public-server"
 };
 
 test("mcpServerBodySchema requires audience for protected servers", () => {

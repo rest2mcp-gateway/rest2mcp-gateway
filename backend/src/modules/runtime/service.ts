@@ -60,7 +60,6 @@ export type SnapshotMcpServer = {
   name: string;
   slug: string;
   version: string;
-  title: string;
   description: string | null;
   authMode: string;
   accessMode: string;
@@ -828,7 +827,7 @@ export const runtimeService = {
       },
       serverInfo: {
         name: runtimeServer.server.slug,
-        title: runtimeServer.server.title,
+        title: runtimeServer.server.name,
         version: runtimeServer.server.version
       }
     };

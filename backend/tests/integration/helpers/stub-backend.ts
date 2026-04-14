@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { once } from "node:events";
 
 type StubRequest = {
-  method: string;
+  method: StubHttpMethod;
   path: string;
   pathname: string;
   query: Record<string, string>;
@@ -27,7 +27,14 @@ type ApiKeyProtection = {
   value: string;
 };
 
-const routeKey = (method: string, path: string) => `${method.toUpperCase()} ${path}`;
+const stubHttpMethods = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
+type StubHttpMethod = (typeof stubHttpMethods)[number];
+
+const parseStubHttpMethod = (value: string | undefined): StubHttpMethod | null => {
+  const normalized = (value ?? "GET").toUpperCase();
+
+  return stubHttpMethods.find((method) => method === normalized) ?? null;
+};
 
 const parseBodyJson = (bodyText: string) => {
   if (!bodyText) {
@@ -42,8 +49,18 @@ const parseBodyJson = (bodyText: string) => {
 };
 
 export const createStubBackend = async () => {
-  const handlers = new Map<string, StubHandler>();
+  const handlers = new Map<StubHttpMethod, Map<string, StubHandler>>();
   const requests: StubRequest[] = [];
+
+  const getRouteHandlers = (method: StubHttpMethod) => {
+    let routeHandlers = handlers.get(method);
+    if (!routeHandlers) {
+      routeHandlers = new Map<string, StubHandler>();
+      handlers.set(method, routeHandlers);
+    }
+
+    return routeHandlers;
+  };
 
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     const chunks: Buffer[] = [];
@@ -53,8 +70,16 @@ export const createStubBackend = async () => {
     const path = req.url ?? "/";
     const parsedUrl = new URL(path, "http://127.0.0.1");
     const bodyText = Buffer.concat(chunks).toString("utf8");
+    const method = parseStubHttpMethod(req.method);
+    if (!method) {
+      res.statusCode = 405;
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify({ error: "method_not_allowed" }));
+      return;
+    }
+
     const recordedRequest: StubRequest = {
-      method: (req.method ?? "GET").toUpperCase(),
+      method,
       path,
       pathname: parsedUrl.pathname,
       query: Object.fromEntries(parsedUrl.searchParams.entries()),
@@ -64,9 +89,8 @@ export const createStubBackend = async () => {
     };
     requests.push(recordedRequest);
 
-    const handler =
-      handlers.get(routeKey(recordedRequest.method, recordedRequest.pathname)) ??
-      handlers.get(routeKey(recordedRequest.method, path));
+    const routeHandlers = handlers.get(recordedRequest.method);
+    const handler = routeHandlers?.get(recordedRequest.pathname) ?? routeHandlers?.get(path);
     if (!handler) {
       res.statusCode = 404;
       res.setHeader("content-type", "application/json");
@@ -112,7 +136,12 @@ export const createStubBackend = async () => {
     baseUrl: `http://127.0.0.1:${address.port}`,
     requests,
     on(method: string, path: string, handler: StubHandler) {
-      handlers.set(routeKey(method, path), handler);
+      const normalizedMethod = parseStubHttpMethod(method);
+      if (!normalizedMethod) {
+        throw new Error(`Unsupported stub backend method: ${method}`);
+      }
+
+      getRouteHandlers(normalizedMethod).set(path, handler);
     },
     onApiKeyProtected(
       method: string,
@@ -120,7 +149,12 @@ export const createStubBackend = async () => {
       protection: ApiKeyProtection,
       handler: StubHandler
     ) {
-      handlers.set(routeKey(method, path), async (request) => {
+      const normalizedMethod = parseStubHttpMethod(method);
+      if (!normalizedMethod) {
+        throw new Error(`Unsupported stub backend method: ${method}`);
+      }
+
+      getRouteHandlers(normalizedMethod).set(path, async (request) => {
         const placement = protection.in ?? "header";
         const actualValue =
           placement === "query"

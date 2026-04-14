@@ -127,7 +127,6 @@ export const mcpServers = pgTable("mcp_servers", {
   name: text("name").notNull(),
   slug: text("slug").notNull(),
   version: text("version").notNull().default("1.0.0"),
-  title: text("title").notNull(),
   description: text("description"),
   authMode: authModeEnum("auth_mode").notNull().default("local"),
   accessMode: text("access_mode").notNull().default("public"),

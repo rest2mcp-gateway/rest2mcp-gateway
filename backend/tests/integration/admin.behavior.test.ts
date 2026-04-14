@@ -842,7 +842,6 @@ test("mcp servers support list, update, delete, and not-found behavior", async (
         name: "Catalog Server",
         slug: "catalog-server",
         version: "1.0.0",
-        title: "Catalog Server",
         authMode: "local",
         accessMode: "public",
         isActive: true
@@ -858,7 +857,6 @@ test("mcp servers support list, update, delete, and not-found behavior", async (
         name: "Dormant Server",
         slug: "dormant-server",
         version: "1.0.0",
-        title: "Dormant Server",
         authMode: "local",
         accessMode: "public",
         isActive: false
@@ -892,19 +890,19 @@ test("mcp servers support list, update, delete, and not-found behavior", async (
       payload: {
         accessMode: "protected",
         audience: "urn:catalog",
-        title: "Catalog Server Protected"
+        name: "Catalog Server Protected"
       }
     });
     assert.equal(updated.response.statusCode, 200, updated.response.body);
     assert.equal(updated.body.data.accessMode, "protected");
     assert.equal(updated.body.data.audience, "urn:catalog");
-    assert.equal(updated.body.data.title, "Catalog Server Protected");
+    assert.equal(updated.body.data.name, "Catalog Server Protected");
 
     const missingUpdate = await adminRequest(handle.app, session, {
       method: "PATCH",
       url: "/api/admin/v1/mcp-servers/11111111-1111-1111-1111-111111111111",
       payload: {
-        title: "Missing"
+        name: "Missing"
       }
     });
     assert.equal(missingUpdate.response.statusCode, 404, missingUpdate.response.body);

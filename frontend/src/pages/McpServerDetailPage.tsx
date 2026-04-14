@@ -54,7 +54,6 @@ export default function McpServerDetailPage() {
     name: "",
     slug: "",
     version: "1.0.0",
-    title: "",
     description: "",
     authMode: "local",
     accessMode: "public",
@@ -72,7 +71,6 @@ export default function McpServerDetailPage() {
       name: server.name,
       slug: server.slug,
       version: server.version,
-      title: server.title,
       description: server.description ?? "",
       authMode: server.authMode,
       accessMode: server.accessMode,
@@ -229,13 +227,10 @@ export default function McpServerDetailPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <FieldLabel required>Title</FieldLabel>
-                  <Input value={form.title} onChange={(event) => updateField("title", event.target.value)} placeholder="Customer Operations MCP" />
-                </div>
-                <div className="space-y-1.5">
                   <FieldLabel required>Version</FieldLabel>
                   <Input value={form.version} onChange={(event) => updateField("version", event.target.value)} className="font-mono text-sm" placeholder="1.0.0" />
                 </div>
+                <div />
               </div>
 
               <div className="space-y-1.5">

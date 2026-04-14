@@ -134,7 +134,6 @@ CREATE TABLE IF NOT EXISTS mcp_servers (
   name text NOT NULL,
   slug text NOT NULL,
   version text NOT NULL DEFAULT '1.0.0',
-  title text NOT NULL,
   description text,
   auth_mode auth_mode NOT NULL DEFAULT 'local',
   access_mode text NOT NULL DEFAULT 'public',
@@ -143,6 +142,7 @@ CREATE TABLE IF NOT EXISTS mcp_servers (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE mcp_servers DROP COLUMN IF EXISTS title;
 ALTER TABLE mcp_servers ADD COLUMN IF NOT EXISTS access_mode text NOT NULL DEFAULT 'public';
 ALTER TABLE mcp_servers ADD COLUMN IF NOT EXISTS audience text;
 CREATE UNIQUE INDEX IF NOT EXISTS mcp_servers_org_slug_idx ON mcp_servers (organization_id, slug);

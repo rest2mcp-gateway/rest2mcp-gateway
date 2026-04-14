@@ -15,7 +15,6 @@ const createMcpServer = async (app: FastifyInstance, session: AdminSession) => {
       name: "Imported API Server",
       slug: "imported-api-server",
       version: "1.0.0",
-      title: "Imported API Server",
       authMode: "local",
       accessMode: "public",
       isActive: true

@@ -235,7 +235,6 @@ export const createRuntimeFixture = async (
       name: "Public Runtime Server",
       slug: "public-runtime-server",
       version: "1.0.0",
-      title: "Public Runtime Server",
       authMode: "local",
       accessMode: mcpOptions.accessMode ?? "public",
       ...(mcpOptions.accessMode === "protected"

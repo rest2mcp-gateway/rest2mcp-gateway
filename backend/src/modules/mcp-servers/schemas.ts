@@ -6,7 +6,6 @@ const mcpServerBaseSchema = z.object({
   name: z.string().min(1),
   slug: z.string().min(1),
   version: z.string().default("1.0.0"),
-  title: z.string().min(1),
   description: z.string().optional(),
   authMode: z.enum(["local", "oidc"]).default("local"),
   accessMode: z.enum(["public", "protected"]).default("public"),

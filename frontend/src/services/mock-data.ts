@@ -42,8 +42,8 @@ export const mockResources: BackendResource[] = [
 ];
 
 export const mockMcpServers: McpServer[] = [
-  { id: 'mcp-1', organization_id: 'org-1', name: 'Customer Tools', slug: 'customer-tools', version: '1.0.0', title: 'Customer Management Tools', description: 'Tools for managing customer data', auth_mode: 'bearer', is_active: true, created_at: '2025-01-20T10:00:00Z', updated_at: '2025-03-20T14:30:00Z' },
-  { id: 'mcp-2', organization_id: 'org-1', name: 'Order Tools', slug: 'order-tools', version: '1.0.0', title: 'Order Management Tools', description: 'Tools for order lifecycle', auth_mode: 'api_key', is_active: true, created_at: '2025-02-05T08:00:00Z', updated_at: '2025-03-18T09:00:00Z' },
+  { id: 'mcp-1', organization_id: 'org-1', name: 'Customer Tools', slug: 'customer-tools', version: '1.0.0', description: 'Tools for managing customer data', auth_mode: 'bearer', is_active: true, created_at: '2025-01-20T10:00:00Z', updated_at: '2025-03-20T14:30:00Z' },
+  { id: 'mcp-2', organization_id: 'org-1', name: 'Order Tools', slug: 'order-tools', version: '1.0.0', description: 'Tools for order lifecycle', auth_mode: 'api_key', is_active: true, created_at: '2025-02-05T08:00:00Z', updated_at: '2025-03-18T09:00:00Z' },
 ];
 
 export const mockTools: Tool[] = [

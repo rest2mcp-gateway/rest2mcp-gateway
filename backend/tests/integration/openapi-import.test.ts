@@ -24,7 +24,6 @@ const createMcpServer = async (
   overrides: Partial<{
     name: string;
     slug: string;
-    title: string;
   }> = {}
 ) => {
   const response = await adminRequest(app, session, {
@@ -35,7 +34,6 @@ const createMcpServer = async (
       name: overrides.name ?? "Imported API Server",
       slug: overrides.slug ?? "imported-api-server",
       version: "1.0.0",
-      title: overrides.title ?? "Imported API Server",
       authMode: "local",
       accessMode: "public",
       isActive: true

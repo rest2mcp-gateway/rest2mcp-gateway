@@ -33,7 +33,7 @@ export const runtimeMetadataRoutes: FastifyPluginAsync = async (app) => {
       request,
       params.serverSlug,
       runtimeServer.authServerConfig,
-      runtimeServer.server.title,
+      runtimeServer.server.name,
       runtimeServer.requiredScopes
     );
   });
