@@ -33,6 +33,7 @@ import { frontendRoutes } from "./modules/frontend/route.js";
 import { runtimeMetadataRoutes, runtimeRoutes } from "./modules/runtime/route.js";
 import { openApiImportRoutes } from "./modules/openapi-import/route.js";
 import { securityRoutes } from "./modules/security/route.js";
+import { assertAllowedRuntimeOrigin, isAllowedOrigin } from "./modules/runtime/auth.js";
 
 export const buildApp = async () => {
   const app = Fastify({
@@ -60,7 +61,32 @@ export const buildApp = async () => {
     app.log.info(formatCompletedRequestLog(request, reply.statusCode, Date.now() - startedAt));
   });
 
-  await app.register(cors, { origin: true, credentials: true });
+  app.addHook("onRequest", async (request) => {
+    if (request.url.startsWith("/mcp/")) {
+      assertAllowedRuntimeOrigin(request.headers.origin, env.mcpAllowedOrigins);
+    }
+  });
+
+  await app.register(cors, {
+    credentials: true,
+    delegator: (request, callback) => {
+      if (!request.url.startsWith("/mcp/")) {
+        callback(null, { origin: true, credentials: true });
+        return;
+      }
+
+      const requestOrigin = request.headers.origin;
+      if (!requestOrigin) {
+        callback(null, { origin: false, credentials: true });
+        return;
+      }
+
+      callback(null, {
+        origin: isAllowedOrigin(requestOrigin, env.mcpAllowedOrigins) ? requestOrigin : false,
+        credentials: true
+      });
+    }
+  });
   await app.register(sensible);
   await app.register(registerDb);
   const jwtSecret = await getOrCreateJwtSecret(app);

@@ -3,20 +3,24 @@ import test from "node:test";
 import type { FastifyRequest } from "fastify";
 import { AppError } from "../../src/lib/errors.js";
 import {
+  assertAllowedRuntimeOrigin,
   buildProtectedResourceMetadata,
   buildUnauthorizedChallenge,
   ensureTokenHasScopes,
   getBearerToken,
   getProtectedResourceMetadataUrl,
+  isAllowedOrigin,
+  normalizeOrigin,
   parseTokenScopes,
   validateRuntimeAccessToken
 } from "../../src/modules/runtime/auth.js";
 
-const createRequest = (authorization?: string): FastifyRequest => ({
+const createRequest = (authorization?: string, origin?: string): FastifyRequest => ({
   protocol: "https",
   headers: {
     host: "gateway.example.com",
-    authorization
+    authorization,
+    origin
   }
 } as FastifyRequest);
 
@@ -27,6 +31,49 @@ test("getBearerToken extracts bearer tokens and ignores other headers", () => {
   assert.equal(getBearerToken("Bearer    "), null);
   assert.equal(getBearerToken("Basic abc"), null);
   assert.equal(getBearerToken(undefined), null);
+});
+
+test("normalizeOrigin canonicalizes origins", () => {
+  assert.equal(normalizeOrigin("https://app.example.com/path?q=1"), "https://app.example.com");
+  assert.equal(normalizeOrigin("https://app.example.com:8443"), "https://app.example.com:8443");
+});
+
+test("isAllowedOrigin matches normalized entries", () => {
+  assert.equal(
+    isAllowedOrigin("https://app.example.com", ["https://app.example.com", "https://other.example.com"]),
+    true
+  );
+  assert.equal(isAllowedOrigin("https://app.example.com", ["https://other.example.com"]), false);
+});
+
+test("assertAllowedRuntimeOrigin allows missing origins for non-browser clients", () => {
+  assert.equal(assertAllowedRuntimeOrigin(undefined, ["https://app.example.com"]), null);
+});
+
+test("assertAllowedRuntimeOrigin rejects malformed and untrusted origins", () => {
+  assert.throws(() => assertAllowedRuntimeOrigin("not-a-url", ["https://app.example.com"]), (error: unknown) => {
+    assert.ok(error instanceof AppError);
+    assert.equal(error.statusCode, 403);
+    assert.equal(error.code, "runtime_origin_forbidden");
+    return true;
+  });
+
+  assert.throws(
+    () => assertAllowedRuntimeOrigin("https://evil.example.com", ["https://app.example.com"]),
+    (error: unknown) => {
+      assert.ok(error instanceof AppError);
+      assert.equal(error.statusCode, 403);
+      assert.equal(error.code, "runtime_origin_forbidden");
+      return true;
+    }
+  );
+});
+
+test("assertAllowedRuntimeOrigin returns the normalized trusted origin", () => {
+  assert.equal(
+    assertAllowedRuntimeOrigin("https://app.example.com/path", ["https://app.example.com"]),
+    "https://app.example.com"
+  );
 });
 
 test("buildProtectedResourceMetadata returns resource metadata with scopes", () => {

@@ -70,6 +70,7 @@ Then set:
 
 - `BOOTSTRAP_ADMIN_PASSWORD` to a strong local password
 - `SECRET_ENCRYPTION_KEY` to a stable secret string of at least 16 characters
+- `MCP_ALLOWED_ORIGINS` if browser-based MCP access should be allowed
 
 For example:
 
@@ -77,6 +78,7 @@ For example:
 BOOTSTRAP_ADMIN_USERNAME=admin
 BOOTSTRAP_ADMIN_PASSWORD=replace-with-a-strong-password
 SECRET_ENCRYPTION_KEY=replace-with-a-long-stable-secret
+MCP_ALLOWED_ORIGINS=https://app.example.com https://console.example.com
 PORT=3000
 HOST=0.0.0.0
 BOOTSTRAP_ADMIN_NAME=Local Admin

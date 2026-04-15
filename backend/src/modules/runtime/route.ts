@@ -3,10 +3,12 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { z } from "zod";
 import { runtimeService } from "./service.js";
 import {
+  assertAllowedRuntimeOrigin,
   buildProtectedResourceMetadata,
   ensureTokenHasScopes,
   validateRuntimeAccessToken
 } from "./auth.js";
+import { env } from "../../config/env.js";
 
 const runtimeParamsSchema = z.object({
   serverSlug: z.string().min(1)
@@ -49,6 +51,7 @@ export const runtimeRoutes: FastifyPluginAsync = async (app) => {
     },
     async handler(request, reply) {
       const params = runtimeParamsSchema.parse(request.params);
+      const allowedOrigin = assertAllowedRuntimeOrigin(request.headers.origin, env.mcpAllowedOrigins);
 
       try {
         const runtimeServer = await runtimeService.getServer(app, params.serverSlug);
@@ -89,12 +92,47 @@ export const runtimeRoutes: FastifyPluginAsync = async (app) => {
         const transport = new StreamableHTTPServerTransport({});
         transport.onclose = () => {};
 
+        if (allowedOrigin) {
+          reply.header("access-control-allow-origin", allowedOrigin);
+          reply.header("access-control-allow-credentials", "true");
+          reply.header("vary", "Origin");
+        }
+
+        const originalWriteHead = reply.raw.writeHead.bind(reply.raw);
+        if (allowedOrigin) {
+          reply.raw.writeHead = ((...args: unknown[]) => {
+            const statusCode = args[0] as number;
+            const statusMessageOrHeaders = args[1];
+            const headers = args[2];
+
+            if (typeof statusMessageOrHeaders === "string") {
+              return originalWriteHead(statusCode, statusMessageOrHeaders, {
+                ...(headers && typeof headers === "object" ? headers : {}),
+                "access-control-allow-origin": allowedOrigin,
+                "access-control-allow-credentials": "true",
+                vary: "Origin"
+              });
+            }
+
+            return originalWriteHead(statusCode, {
+              ...(statusMessageOrHeaders && typeof statusMessageOrHeaders === "object" ? statusMessageOrHeaders : {}),
+              "access-control-allow-origin": allowedOrigin,
+              "access-control-allow-credentials": "true",
+              vary: "Origin"
+            });
+          }) as typeof reply.raw.writeHead;
+        }
+
         await server.connect(transport as Parameters<typeof server.connect>[0]);
-        await transport.handleRequest(
-          request.raw,
-          reply.raw,
-          request.method === "POST" ? request.body : undefined
-        );
+        try {
+          await transport.handleRequest(
+            request.raw,
+            reply.raw,
+            request.method === "POST" ? request.body : undefined
+          );
+        } finally {
+          reply.raw.writeHead = originalWriteHead;
+        }
         await server.close();
         return reply;
       } catch (error) {

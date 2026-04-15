@@ -53,6 +53,7 @@ Copy the sample environment file and set at least:
 
 - `BOOTSTRAP_ADMIN_PASSWORD`
 - `SECRET_ENCRYPTION_KEY`
+- `MCP_ALLOWED_ORIGINS` if browser-based MCP access should be allowed
 
 ```bash
 cp .env.example .env
@@ -67,6 +68,8 @@ http://localhost:3000
 ```
 
 Use the bootstrap admin username from `.env` or the default `admin`, then sign in with the bootstrap password.
+
+If browser clients will call the MCP runtime directly, set `MCP_ALLOWED_ORIGINS` to a comma-separated or space-separated list of allowed origins such as `https://app.example.com https://console.example.com`. Requests without an `Origin` header continue to work for non-browser clients.
 
 For the full walkthrough, including:
 

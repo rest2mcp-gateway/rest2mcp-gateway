@@ -480,12 +480,14 @@ export const callRuntimeRaw = async (
     method = "POST",
     body,
     serverSlug = "public-runtime-server",
-    token
+    token,
+    headers
   }: {
     method?: "GET" | "POST";
     body?: Record<string, unknown>;
     serverSlug?: string;
     token?: string;
+    headers?: Record<string, string>;
   }
 ) => requestRuntime(app, {
   method,
@@ -497,7 +499,8 @@ export const callRuntimeRaw = async (
       ? {
           authorization: `Bearer ${token}`
         }
-      : {})
+      : {}),
+    ...(headers ?? {})
   }
 });
 

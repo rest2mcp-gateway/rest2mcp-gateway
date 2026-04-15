@@ -25,6 +25,42 @@ export type ValidatedRuntimeAccessToken = {
   scopes: string[];
 };
 
+export const normalizeOrigin = (value: string) => {
+  const normalized = new URL(value).origin;
+  if (normalized === "null") {
+    throw new Error(`Invalid origin: ${value}`);
+  }
+
+  return normalized;
+};
+
+export const isAllowedOrigin = (origin: string, allowedOrigins: string[]) => {
+  const normalizedOrigin = normalizeOrigin(origin);
+  return allowedOrigins.includes(normalizedOrigin);
+};
+
+export const assertAllowedRuntimeOrigin = (
+  originHeader: string | undefined,
+  allowedOrigins: string[]
+) => {
+  if (!originHeader) {
+    return null;
+  }
+
+  let normalizedOrigin: string;
+  try {
+    normalizedOrigin = normalizeOrigin(originHeader);
+  } catch {
+    throw new AppError(403, "MCP requests must provide a valid Origin header", "runtime_origin_forbidden");
+  }
+
+  if (!allowedOrigins.includes(normalizedOrigin)) {
+    throw new AppError(403, `MCP origin ${normalizedOrigin} is not allowed`, "runtime_origin_forbidden");
+  }
+
+  return normalizedOrigin;
+};
+
 export const getJwks = (jwksUri: string) => {
   const existing = jwksCache.get(jwksUri);
   if (existing) {

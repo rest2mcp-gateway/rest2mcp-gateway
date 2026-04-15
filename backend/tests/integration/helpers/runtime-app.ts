@@ -23,13 +23,21 @@ const TEST_ENV = {
 } as const;
 
 const assignTestEnv = (dbRootDir: string, pgliteDataDir: string) => {
+  const mcpAllowedOrigins = process.env.MCP_ALLOWED_ORIGINS ?? "";
+
   Object.assign(process.env, TEST_ENV, {
+    MCP_ALLOWED_ORIGINS: mcpAllowedOrigins,
     PGLITE_DATA_DIR: pgliteDataDir
   });
 
   return import("../../../src/config/env.js").then(({ env }) => {
     Object.assign(env, TEST_ENV, {
+      MCP_ALLOWED_ORIGINS: mcpAllowedOrigins,
       PGLITE_DATA_DIR: pgliteDataDir,
+      mcpAllowedOrigins: mcpAllowedOrigins
+        .split(/[\s,]+/)
+        .map((entry) => entry.trim())
+        .filter(Boolean),
       startupWarnings: []
     });
 

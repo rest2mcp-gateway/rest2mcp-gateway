@@ -236,6 +236,83 @@ test("returns tool_not_found for unknown runtime tools", async () => {
   }
 });
 
+test("rejects MCP requests from origins outside the configured allowlist", async () => {
+  const previousAllowlist = process.env.MCP_ALLOWED_ORIGINS;
+  process.env.MCP_ALLOWED_ORIGINS = "https://app.example.com https://console.example.com";
+
+  const handle = await createTestApp();
+  try {
+    const session = await loginAsBootstrapAdmin(handle.app);
+    const backend = await createStubBackend();
+    try {
+      await createRuntimeFixture(handle.app, session, backend.baseUrl);
+      await validateAndPublish(handle.app, session);
+
+      const result = await callRuntimeRaw(handle.app, session, {
+        body: {
+          jsonrpc: "2.0",
+          id: 9,
+          method: "initialize"
+        },
+        headers: {
+          origin: "https://evil.example.com"
+        }
+      });
+
+      assert.equal(result.response.statusCode, 403, result.response.body);
+      assert.equal(result.body.error.code, "runtime_origin_forbidden");
+    } finally {
+      await backend.close();
+    }
+  } finally {
+    if (previousAllowlist === undefined) {
+      delete process.env.MCP_ALLOWED_ORIGINS;
+    } else {
+      process.env.MCP_ALLOWED_ORIGINS = previousAllowlist;
+    }
+    await handle.close();
+  }
+});
+
+test("reflects CORS headers for allowed MCP origins", async () => {
+  const previousAllowlist = process.env.MCP_ALLOWED_ORIGINS;
+  process.env.MCP_ALLOWED_ORIGINS = "https://app.example.com, https://console.example.com";
+
+  const handle = await createTestApp();
+  try {
+    const session = await loginAsBootstrapAdmin(handle.app);
+    const backend = await createStubBackend();
+    try {
+      await createRuntimeFixture(handle.app, session, backend.baseUrl);
+      await validateAndPublish(handle.app, session);
+
+      const result = await callRuntimeRaw(handle.app, session, {
+        body: {
+          jsonrpc: "2.0",
+          id: 10,
+          method: "initialize"
+        },
+        headers: {
+          origin: "https://app.example.com"
+        }
+      });
+
+      assert.equal(result.response.statusCode, 200, result.response.body);
+      assert.equal(result.response.headers["access-control-allow-origin"], "https://app.example.com");
+      assert.equal(result.response.headers["access-control-allow-credentials"], "true");
+    } finally {
+      await backend.close();
+    }
+  } finally {
+    if (previousAllowlist === undefined) {
+      delete process.env.MCP_ALLOWED_ORIGINS;
+    } else {
+      process.env.MCP_ALLOWED_ORIGINS = previousAllowlist;
+    }
+    await handle.close();
+  }
+});
+
 test("allows protected runtime calls when scopes are carried in the scp claim", async () => {
   const handle = await createTestApp();
   try {

@@ -11,10 +11,34 @@ const dotenvPath = process.env.DOTENV_CONFIG_PATH ?? resolve(repoRootDir, ".env"
 
 loadEnv({ path: dotenvPath });
 
+const parseOriginAllowlist = (value?: string) => {
+  if (!value) {
+    return [];
+  }
+
+  const entries = value
+    .split(/[\s,]+/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  return Array.from(
+    new Set(
+      entries.map((entry) => {
+        const normalized = new URL(entry).origin;
+        if (normalized === "null") {
+          throw new Error(`Invalid MCP_ALLOWED_ORIGINS entry: ${entry}`);
+        }
+        return normalized;
+      })
+    )
+  );
+};
+
 export const rawEnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().default(3000),
   HOST: z.string().default("0.0.0.0"),
+  MCP_ALLOWED_ORIGINS: z.string().optional(),
   DATABASE_PROVIDER: z.enum(["pglite", "postgres"]).default("pglite"),
   DATABASE_URL: z.string().optional(),
   PGLITE_DATA_DIR: z.string().default(defaultPgliteDataDir),
@@ -38,6 +62,7 @@ const envSchema = rawEnvSchema.superRefine((value, ctx) => {
 
 const envInput = {
   ...process.env,
+  MCP_ALLOWED_ORIGINS: process.env.MCP_ALLOWED_ORIGINS,
   SECRET_ENCRYPTION_KEY:
     process.env.SECRET_ENCRYPTION_KEY ??
     (process.env.NODE_ENV === "test" ? "test-secret-encryption-key-1234567890" : undefined),
@@ -51,6 +76,7 @@ const envInput = {
 
 export const env = {
   ...envSchema.parse(envInput),
+  mcpAllowedOrigins: parseOriginAllowlist(envInput.MCP_ALLOWED_ORIGINS),
   startupWarnings: [] as string[]
 };
 
